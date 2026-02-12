@@ -199,4 +199,27 @@ export function renderStudentScreen(container, lang) {
 
         if (type === 'user') {
             div.style.alignSelf = 'flex-end';
-            div.style.background = '#dcedc
+            div.style.background = '#dcedc8'; // Πράσινο για τον χρήστη
+        } else {
+            div.style.alignSelf = 'flex-start';
+            div.style.background = '#e3f2fd'; // Μπλε για το AI
+        }
+
+        if (img) {
+            const imgEl = document.createElement('img');
+            imgEl.src = img;
+            imgEl.style.maxWidth = '100%';
+            imgEl.style.borderRadius = '5px';
+            imgEl.style.marginBottom = '5px';
+            div.appendChild(imgEl);
+        }
+
+        const textNode = document.createElement('div');
+        textNode.innerText = text;
+        div.appendChild(textNode);
+
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        return id;
+    }
+}
