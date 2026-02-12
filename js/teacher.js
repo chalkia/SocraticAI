@@ -112,9 +112,29 @@ export function renderTeacherScreen(container, lang) {
 
         // Δημιουργία δωματίου
         const roomCode = 'ROOM-' + Math.floor(1000 + Math.random() * 9000);
-        
-        // ... (Κώδικας αποθήκευσης στη Firebase για το room - ίδιος με πριν)
-        // Για συντομία στο παράδειγμα:
+        // ... (μέσα στο start-session-btn event listener, μετά τη δημιουργία του roomCode)
+
+        try {
+            // ΠΡΟΣΟΧΗ: Προσθέτουμε το apiKey εδώ για να το βρει ο μαθητής
+            await addDoc(collection(db, "rooms"), {
+                code: roomCode,
+                teacherPrompt: document.getElementById('system-prompt').value,
+                maxMessages: parseInt(document.getElementById('max-messages').value),
+                apiKey: apiKey, // <--- Η ΝΕΑ ΓΡΑΜΜΗ: Αποθηκεύει το κλειδί στο δωμάτιο
+                createdAt: serverTimestamp(),
+                status: 'active'
+            });
+
+            // Ενημέρωση UI
+            document.getElementById('room-info').style.display = 'block';
+            document.getElementById('display-room-code').innerText = roomCode;
+            localStorage.setItem('current_room_code', roomCode);
+            alert(`Το δωμάτιο ${roomCode} δημιουργήθηκε!`);
+        } catch (error) {
+            console.error("Error creating room:", error);
+            alert("Σφάλμα κατά τη δημιουργία δωματίου.");
+        }
+       
         document.getElementById('room-info').style.display = 'block';
         document.getElementById('display-room-code').innerText = roomCode;
         localStorage.setItem('current_room_code', roomCode);
