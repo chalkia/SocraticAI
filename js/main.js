@@ -30,7 +30,13 @@ document.getElementById('btn-teacher').addEventListener('click', () => {
 
 document.getElementById('btn-student').addEventListener('click', () => {
     switchScreen('student-screen');
-    // Εδώ θα καλούμε το renderStudentScreen(document.getElementById('student-screen'), currentLang);
+  import { renderStudentScreen } from './student.js'; // <--- Πρόσθεσε αυτό πάνω-πάνω
+
+
+document.getElementById('btn-student').addEventListener('click', () => {
+    switchScreen('student-screen');
+    renderStudentScreen(document.getElementById('student-screen'), currentLang); // <--- Ενεργοποίησε αυτό
+});
     document.getElementById('student-screen').innerHTML = `<h2>${translations[currentLang].student_btn} (Coming Soon)</h2>`;
 });
 
