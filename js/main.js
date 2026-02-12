@@ -1,7 +1,7 @@
+// 1. ΟΛΑ ΤΑ IMPORTS ΣΤΗΝ ΚΟΡΥΦΗ
 import { updateUI, translations } from './i18n.js';
 import { renderTeacherScreen } from './teacher.js';
-// Θα κάνουμε import το student αργότερα
-// import { renderStudentScreen } from './student.js';
+import { renderStudentScreen } from './student.js'; // <--- Τώρα είναι σωστά εδώ πάνω!
 
 let currentLang = localStorage.getItem('lang') || 'gr';
 
@@ -17,27 +17,25 @@ document.getElementById('lang-selector').addEventListener('change', (e) => {
     
     // Αν είμαστε ήδη σε κάποια οθόνη, την ξανασχεδιάζουμε στη νέα γλώσσα
     const teacherScreen = document.getElementById('teacher-screen');
+    const studentScreen = document.getElementById('student-screen');
+
     if (teacherScreen.style.display === 'block') {
         renderTeacherScreen(teacherScreen, currentLang);
+    } else if (studentScreen.style.display === 'block') {
+        renderStudentScreen(studentScreen, currentLang);
     }
 });
 
-// Χειρισμός κουμπιών Ρόλων
+// Χειρισμός κουμπιού ΕΚΠΑΙΔΕΥΤΙΚΟΥ
 document.getElementById('btn-teacher').addEventListener('click', () => {
     switchScreen('teacher-screen');
     renderTeacherScreen(document.getElementById('teacher-screen'), currentLang);
 });
 
+// Χειρισμός κουμπιού ΜΑΘΗΤΗ (Καθαρό και σωστό)
 document.getElementById('btn-student').addEventListener('click', () => {
     switchScreen('student-screen');
-  import { renderStudentScreen } from './student.js'; // <--- Πρόσθεσε αυτό πάνω-πάνω
-
-
-document.getElementById('btn-student').addEventListener('click', () => {
-    switchScreen('student-screen');
-    renderStudentScreen(document.getElementById('student-screen'), currentLang); // <--- Ενεργοποίησε αυτό
-});
-    document.getElementById('student-screen').innerHTML = `<h2>${translations[currentLang].student_btn} (Coming Soon)</h2>`;
+    renderStudentScreen(document.getElementById('student-screen'), currentLang);
 });
 
 // Βοηθητική συνάρτηση εναλλαγής οθονών
