@@ -1,4 +1,4 @@
-import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, query, where, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-logic.js';
 import { askGemini } from './gemini-api.js';
 import { getTranslation } from './i18n.js';
@@ -7,7 +7,12 @@ export function renderStudentScreen(container, lang) {
     container.innerHTML = `
         <div id="student-login" style="text-align:center; padding:20px;">
             <h2>${getTranslation(lang, 'student_btn')}</h2>
-            <input type="text" id="room-code-input" placeholder="ROOM-XXXX" style="padding:10px; font-size:1.2em; text-transform:uppercase; width:200px;">
+            
+            <div style="margin-bottom:15px;">
+                <input type="text" id="student-name" placeholder="Όνομα ή Ομάδα (πχ Ομάδα 1)" style="padding:10px; font-size:1.1em; width:200px; margin-bottom:5px;">
+            </div>
+            
+            <input type="text" id="room-code-input" placeholder="ROOM-CODE" style="padding:10px; font-size:1.2em; text-transform:uppercase; width:200px;">
             <br><br>
             <button id="join-room-btn" class="primary-btn" style="background:#4A90E2; color:white; padding:10px 20px;">Join Room</button>
             <p id="login-error" style="color:red; margin-top:10px;"></p>
@@ -26,47 +31,64 @@ export function renderStudentScreen(container, lang) {
             </div>
 
             <div style="padding:10px; background:white; border-top:1px solid #ddd; display:flex; gap:10px; align-items:center;">
-                
                 <label for="image-upload" style="cursor:pointer; font-size:1.5em;">📷</label>
                 <input type="file" id="image-upload" accept="image/*" style="display:none;">
-                
                 <div id="img-preview" style="display:none; width:40px; height:40px; border:1px solid #ccc; background-size:cover;"></div>
 
-                <textarea id="user-input" rows="1" placeholder="Γράψε την ερώτησή σου..." style="flex:1; padding:10px;"></textarea>
-                
+                <textarea id="user-input" rows="1" placeholder="..." style="flex:1; padding:10px;"></textarea>
                 <button id="send-btn" style="background:#27ae60; color:white; border:none; padding:10px 15px; border-radius:5px;">➤</button>
             </div>
         </div>
     `;
 
-    // --- LOGIC ---
-    let currentRoom = null;
+    // --- METABLHTES ---
+    let currentRoomData = null; // Τα δεδομένα του δωματίου (prompt, maxMessages)
+    let currentRoomDocId = null; // Το ID του εγγράφου στη Firebase (για να ξέρουμε πού να σώσουμε)
     let questionsLeft = 0;
     let selectedImageBase64 = null;
+    let studentId = null; // Μοναδικό ID για τον μαθητή
+    let studentName = "Anonymous";
+    let chatHistory = []; // Τοπική μνήμη για το AI context
 
-    // 1. JOIN ROOM
+    // 1. JOIN ROOM LOGIC
     document.getElementById('join-room-btn').addEventListener('click', async () => {
         const code = document.getElementById('room-code-input').value.trim().toUpperCase();
+        const nameInput = document.getElementById('student-name').value.trim();
         const errorEl = document.getElementById('login-error');
+        
+        if (!nameInput) {
+            errorEl.innerText = "Please enter your name.";
+            return;
+        }
+
         errorEl.innerText = "Searching...";
+        studentName = nameInput;
 
         try {
+            // Ψάχνουμε το δωμάτιο με βάση τον κωδικό
             const q = query(collection(db, "rooms"), where("code", "==", code));
             const querySnapshot = await getDocs(q);
 
             if (querySnapshot.empty) {
                 errorEl.innerText = "❌ Room not found.";
             } else {
-                // Βρήκαμε το δωμάτιο!
-                const doc = querySnapshot.docs[0];
-                currentRoom = doc.data();
-                questionsLeft = currentRoom.maxMessages;
+                const docSnap = querySnapshot.docs[0];
+                currentRoomData = docSnap.data();
+                currentRoomDocId = docSnap.id; // ΚΡΑΤΑΜΕ ΤΟ ID ΓΙΑ ΤΗ ΒΑΣΗ
+                questionsLeft = currentRoomData.maxMessages;
+                
+                // Δημιουργία unique ID για τον μαθητή
+                studentId = studentName + '_' + Date.now(); 
 
-                // Εμφάνιση Chat UI
+                // Καθαρισμός & UI
+                chatHistory = []; 
                 document.getElementById('student-login').style.display = 'none';
                 document.getElementById('student-chat-ui').style.display = 'flex';
-                document.getElementById('room-display').innerText = `Room: ${code}`;
+                document.getElementById('room-display').innerText = `Room: ${code} | ${studentName}`;
                 updateCounter();
+
+                // (Προαιρετικά) Καταγραφή εισόδου μαθητή στη βάση
+                logMessageToDB("SYSTEM", `${studentName} joined the room.`);
             }
         } catch (err) {
             console.error(err);
@@ -96,33 +118,79 @@ export function renderStudentScreen(container, lang) {
 
         if ((!text && !selectedImageBase64) || questionsLeft <= 0) return;
 
-        // Προσθήκη μηνύματος χρήστη στο UI
-        addMessage(text, 'user', selectedImageBase64);
+        // --- ΒΗΜΑ 1: UI & LOCAL STATE ---
+        addMessageUI(text, 'user', selectedImageBase64);
         inputEl.value = '';
-        
-        // Καθαρισμός εικόνας
         const imageToSend = selectedImageBase64;
         selectedImageBase64 = null;
         document.getElementById('img-preview').style.display = 'none';
-        document.getElementById('image-upload').value = ''; // Reset file input
-
-        // Μείωση ορίου
+        document.getElementById('image-upload').value = '';
+        
         questionsLeft--;
         updateCounter();
 
-        // Προετοιμασία Prompt (Συνδυασμός Οδηγίας Καθηγητή + Ερώτησης Μαθητή)
-        const fullPrompt = `${currentRoom.teacherPrompt}\n\nStudent Question: ${text}`;
+        // --- ΒΗΜΑ 2: DB LOGGING (ΓΙΑ ΤΟΝ ΚΑΘΗΓΗΤΗ) ---
+        // Σώζουμε τι είπε ο μαθητής στη βάση
+        await logMessageToDB("student", text);
 
-        // Ένδειξη ότι το AI σκέφτεται...
-        const loadingId = addMessage("Thinking...", 'ai-loading');
+        // --- ΒΗΜΑ 3: AI GENERATION ---
+        
+        // Κατασκευή Prompt (με ιστορικό)
+        let fullPrompt = `System Instruction: ${currentRoomData.teacherPrompt}\n\n`;
+        const recentHistory = chatHistory.slice(-6); 
+        if (recentHistory.length > 0) {
+            fullPrompt += "--- Chat History ---\n";
+            recentHistory.forEach(msg => {
+                fullPrompt += `${msg.role === 'user' ? 'Student' : 'Tutor'}: ${msg.text}\n`;
+            });
+            fullPrompt += "--- End of History ---\n\n";
+        }
+        fullPrompt += `Student: ${text}\n`;
+        fullPrompt += `Tutor:`;
 
-        // Κλήση στο Gemini
-        const response = await askGemini(fullPrompt, currentRoom.apiKey, imageToSend);
+        // Update local history
+        chatHistory.push({ role: 'user', text: text });
 
-        // Αντικατάσταση του "Thinking..." με την απάντηση
-        document.getElementById(loadingId).innerText = response;
-        document.getElementById(loadingId).classList.remove('ai-loading');
+        // Loading Indicator
+        const loadingId = addMessageUI("Thinking...", 'ai-loading');
+
+        // Call Gemini
+        const response = await askGemini(fullPrompt, currentRoomData.apiKey, imageToSend);
+
+        // Update UI
+        const loadingEl = document.getElementById(loadingId);
+        if (loadingEl) {
+            loadingEl.innerText = response;
+            loadingEl.classList.remove('ai-loading');
+        }
+
+        // --- ΒΗΜΑ 4: DB LOGGING (AI RESPONSE) ---
+        // Σώζουμε τι απάντησε το AI στη βάση
+        await logMessageToDB("ai", response);
+
+        // Update local history
+        chatHistory.push({ role: 'ai', text: response });
     });
+
+    // --- ΒΟΗΘΗΤΙΚΕΣ ΣΥΝΑΡΤΗΣΕΙΣ ---
+
+    // Νέα συνάρτηση: Στέλνει το μήνυμα στη Firebase
+    async function logMessageToDB(senderRole, messageText) {
+        if (!currentRoomDocId) return;
+
+        try {
+            // Αποθηκεύουμε στη διαδρομή: rooms/{roomID}/messages/{messageID}
+            await addDoc(collection(db, "rooms", currentRoomDocId, "messages"), {
+                studentId: studentId,      // Ποιος μαθητής (ID)
+                studentName: studentName,  // Ποιος μαθητής (Όνομα - για ευκολία)
+                sender: senderRole,        // 'student', 'ai', 'SYSTEM'
+                text: messageText,
+                timestamp: serverTimestamp() // Ώρα Server (για σωστή σειρά)
+            });
+        } catch (error) {
+            console.error("Error logging to DB:", error);
+        }
+    }
 
     function updateCounter() {
         const badge = document.getElementById('questions-left');
@@ -134,7 +202,7 @@ export function renderStudentScreen(container, lang) {
         }
     }
 
-    function addMessage(text, type, img = null) {
+    function addMessageUI(text, type, img = null) {
         const chatBox = document.getElementById('chat-messages');
         const div = document.createElement('div');
         const id = 'msg-' + Date.now();
@@ -147,13 +215,12 @@ export function renderStudentScreen(container, lang) {
 
         if (type === 'user') {
             div.style.alignSelf = 'flex-end';
-            div.style.background = '#dcedc8'; // Light green
+            div.style.background = '#dcedc8'; 
         } else {
             div.style.alignSelf = 'flex-start';
-            div.style.background = '#e3f2fd'; // Light blue
+            div.style.background = '#e3f2fd'; 
         }
 
-        // Αν υπάρχει εικόνα, βάλτην πριν το κείμενο
         if (img) {
             const imgEl = document.createElement('img');
             imgEl.src = img;
