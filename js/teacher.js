@@ -8,11 +8,40 @@ export function renderTeacherScreen(container, lang) {
             <h2>${getTranslation(lang, 'teacher_dashboard')}</h2>
             
             <div class="card setup-card">
-                <h3>🛠️ 1. Setup</h3>
-                <label>System Prompt:</label>
-                <textarea id="system-prompt" rows="3">Είσαι ένας Σωκρατικός βοηθός...</textarea>
+                <h3>🛠️ 1. Setup Class Agent</h3>
+                <p style="font-size:0.9em; color:#666; margin-bottom:15px;">Define the AI's behavior precisely.</p>
+                
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div style="grid-column: span 2;">
+                        <label><strong>${getTranslation(lang, 'lbl_context')}</strong></label>
+                        <input type="text" id="setup-context" placeholder="${getTranslation(lang, 'ph_context')}" style="width:100%;">
+                    </div>
+
+                    <div>
+                        <label><strong>${getTranslation(lang, 'lbl_grade')}</strong></label>
+                        <input type="text" id="setup-grade" placeholder="${getTranslation(lang, 'ph_grade')}" style="width:100%;">
+                    </div>
+
+                    <div>
+                        <label><strong>${getTranslation(lang, 'lbl_goal')}</strong></label>
+                        <input type="text" id="setup-goal" placeholder="${getTranslation(lang, 'ph_goal')}" style="width:100%;">
+                    </div>
+
+                    <div style="grid-column: span 2;">
+                        <label><strong>${getTranslation(lang, 'lbl_method')}</strong></label>
+                        <textarea id="setup-method" rows="2" placeholder="${getTranslation(lang, 'ph_method')}" style="width:100%;"></textarea>
+                    </div>
+
+                    <div style="grid-column: span 2;">
+                        <label><strong>${getTranslation(lang, 'lbl_rules')}</strong></label>
+                        <textarea id="setup-rules" rows="2" placeholder="${getTranslation(lang, 'ph_rules')}" style="width:100%;"></textarea>
+                    </div>
+                </div>
+
+                <hr>
+
                 <div style="margin-top:10px;">
-                    <label>Max Questions:</label>
+                    <label>Max Questions per Group:</label>
                     <input type="number" id="max-messages" value="15" style="width:60px;">
                 </div>
                 <div style="margin-top:10px;">
@@ -50,6 +79,7 @@ export function renderTeacherScreen(container, lang) {
             
             <div id="room-info" style="display:none; margin-top:20px; text-align:center;">
                 <h3>Code: <span id="display-room-code" style="color:blue; font-size:1.5em;"></span></h3>
+                <p>Waiting for students...</p>
             </div>
         </div>
     `;
@@ -65,20 +95,19 @@ export function renderTeacherScreen(container, lang) {
             localStorage.setItem('gemini_api_key', personalKey);
             statusEl.innerText = "✅ Personal Key Saved!";
             statusEl.style.color = "green";
-            alert("Το κλειδί αποθηκεύτηκε τοπικά στον browser σας.");
+            alert("Key Saved locally.");
         } else {
-            alert("Παρακαλώ εισάγετε ένα κλειδί.");
+            alert("Please enter a key.");
         }
     });
 
-    // ΛΕΙΤΟΥΡΓΙΑ 2: Φόρτωση από Firebase (Power User)
+    // ΛΕΙΤΟΥΡΓΙΑ 2: Power User Load
     document.getElementById('load-config-btn').addEventListener('click', async () => {
         const powerId = document.getElementById('power-user-id').value.trim();
         const pin = document.getElementById('power-user-pin').value.trim();
 
         if (!powerId || !pin) {
             statusEl.innerText = "⚠️ ID & PIN required";
-            statusEl.style.color = "orange";
             return;
         }
 
@@ -89,7 +118,7 @@ export function renderTeacherScreen(container, lang) {
 
             if (docSnap.exists() && docSnap.data().pin === pin) {
                 localStorage.setItem('gemini_api_key', docSnap.data().geminiKey);
-                statusEl.innerText = "✅ Shared Key Loaded (Mode: Power User)";
+                statusEl.innerText = "✅ Shared Key Loaded";
                 statusEl.style.color = "green";
             } else {
                 statusEl.innerText = "❌ Invalid ID or PIN";
@@ -102,41 +131,64 @@ export function renderTeacherScreen(container, lang) {
         }
     });
 
-    // ΛΕΙΤΟΥΡΓΙΑ 3: Έλεγχος πριν την εκκίνηση
+    // ΛΕΙΤΟΥΡΓΙΑ 3: Start Session (ΣΥΝΘΕΣΗ PROMPT ME NEA ΔΟΜΗ)
     document.getElementById('start-session-btn').addEventListener('click', async () => {
         const apiKey = localStorage.getItem('gemini_api_key');
         const consent = document.getElementById('research-consent-check').checked;
 
-        if (!consent) return alert("⚠️ Please agree to the research consent.");
-        if (!apiKey) return alert("⚠️ Please enter an API Key (Option A) or load a Shared Key (Option B).");
+        if (!consent) return alert("Please agree to the research consent.");
+        if (!apiKey) return alert("Please load an API Key first.");
 
-        // Δημιουργία δωματίου
+        // Λήψη δεδομένων
+        const context = document.getElementById('setup-context').value.trim() || "General Tutor";
+        const grade = document.getElementById('setup-grade').value.trim() || "General Audience";
+        const goal = document.getElementById('setup-goal').value.trim() || "Help the student learn.";
+        const method = document.getElementById('setup-method').value.trim() || "Helpful and polite.";
+        const rules = document.getElementById('setup-rules').value.trim() || "No specific limits.";
+
+        // --- Η ΜΑΓΕΙΑ: ΣΥΝΘΕΣΗ ΤΟΥ SYSTEM PROMPT ---
+        // Αυτό μιμείται τη δομή του παραδείγματος που έστειλες
+        const compiledPrompt = `
+ROLE & CONTEXT:
+You are an AI Tutor.
+Topic/Role: ${context}
+
+TARGET AUDIENCE:
+Student Level: ${grade} (Adjust language complexity accordingly).
+
+PEDAGOGICAL GOALS:
+${goal}
+
+BEHAVIOR & METHOD (The "Socratic" Approach):
+${method}
+- Do NOT provide direct answers if the method forbids it.
+- Guide the student step-by-step.
+
+STRICT CONSTRAINTS & RULES:
+${rules}
+- If a student asks unrelated questions, strictly adhere to these rules.
+        `.trim();
+
         const roomCode = 'ROOM-' + Math.floor(1000 + Math.random() * 9000);
-        // ... (μέσα στο start-session-btn event listener, μετά τη δημιουργία του roomCode)
 
         try {
-            // ΠΡΟΣΟΧΗ: Προσθέτουμε το apiKey εδώ για να το βρει ο μαθητής
             await addDoc(collection(db, "rooms"), {
                 code: roomCode,
-                teacherPrompt: document.getElementById('system-prompt').value,
+                teacherPrompt: compiledPrompt, // Το σύνθετο prompt
                 maxMessages: parseInt(document.getElementById('max-messages').value),
-                apiKey: apiKey, // <--- Η ΝΕΑ ΓΡΑΜΜΗ: Αποθηκεύει το κλειδί στο δωμάτιο
+                apiKey: apiKey,
                 createdAt: serverTimestamp(),
                 status: 'active'
             });
 
-            // Ενημέρωση UI
             document.getElementById('room-info').style.display = 'block';
             document.getElementById('display-room-code').innerText = roomCode;
             localStorage.setItem('current_room_code', roomCode);
-            alert(`Το δωμάτιο ${roomCode} δημιουργήθηκε!`);
+            document.getElementById('start-session-btn').style.display = 'none';
+
         } catch (error) {
             console.error("Error creating room:", error);
-            alert("Σφάλμα κατά τη δημιουργία δωματίου.");
+            alert("Error creating room.");
         }
-       
-        document.getElementById('room-info').style.display = 'block';
-        document.getElementById('display-room-code').innerText = roomCode;
-        localStorage.setItem('current_room_code', roomCode);
     });
 }
