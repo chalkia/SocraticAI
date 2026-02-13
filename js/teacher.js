@@ -1,4 +1,4 @@
-import { doc, getDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { doc, getDoc, collection, addDoc, serverTimestamp, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-logic.js';
 import { getTranslation } from './i18n.js';
 
@@ -80,6 +80,7 @@ export function renderTeacherScreen(container, lang) {
             <div id="room-info" style="display:none; margin-top:20px; text-align:center;">
                 <h3>Code: <span id="display-room-code" style="color:blue; font-size:1.5em;"></span></h3>
                 <p>Waiting for students...</p>
+                <div id="students-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:20px; margin-top:20px; text-align:left;"></div>
             </div>
         </div>
     `;
@@ -88,7 +89,7 @@ export function renderTeacherScreen(container, lang) {
 
     const statusEl = document.getElementById('key-status-text');
 
-    // ΛΕΙΤΟΥΡΓΙΑ 1: Αποθήκευση Προσωπικού Κλειδιού
+    // 1. Save Personal Key
     document.getElementById('save-personal-key-btn').addEventListener('click', () => {
         const personalKey = document.getElementById('personal-api-key').value.trim();
         if (personalKey) {
@@ -101,7 +102,7 @@ export function renderTeacherScreen(container, lang) {
         }
     });
 
-    // ΛΕΙΤΟΥΡΓΙΑ 2: Power User Load
+    // 2. Load Shared Key
     document.getElementById('load-config-btn').addEventListener('click', async () => {
         const powerId = document.getElementById('power-user-id').value.trim();
         const pin = document.getElementById('power-user-pin').value.trim();
@@ -131,7 +132,7 @@ export function renderTeacherScreen(container, lang) {
         }
     });
 
-    // ΛΕΙΤΟΥΡΓΙΑ 3: Start Session (ΣΥΝΘΕΣΗ PROMPT ME NEA ΔΟΜΗ)
+    // 3. Start Session
     document.getElementById('start-session-btn').addEventListener('click', async () => {
         const apiKey = localStorage.getItem('gemini_api_key');
         const consent = document.getElementById('research-consent-check').checked;
@@ -139,15 +140,12 @@ export function renderTeacherScreen(container, lang) {
         if (!consent) return alert("Please agree to the research consent.");
         if (!apiKey) return alert("Please load an API Key first.");
 
-        // Λήψη δεδομένων
         const context = document.getElementById('setup-context').value.trim() || "General Tutor";
         const grade = document.getElementById('setup-grade').value.trim() || "General Audience";
         const goal = document.getElementById('setup-goal').value.trim() || "Help the student learn.";
         const method = document.getElementById('setup-method').value.trim() || "Helpful and polite.";
         const rules = document.getElementById('setup-rules').value.trim() || "No specific limits.";
 
-        // --- Η ΜΑΓΕΙΑ: ΣΥΝΘΕΣΗ ΤΟΥ SYSTEM PROMPT ---
-        // Αυτό μιμείται τη δομή του παραδείγματος που έστειλες
         const compiledPrompt = `
 ROLE & CONTEXT:
 You are an AI Tutor.
@@ -172,23 +170,82 @@ ${rules}
         const roomCode = 'ROOM-' + Math.floor(1000 + Math.random() * 9000);
 
         try {
-            await addDoc(collection(db, "rooms"), {
+            // Δημιουργία δωματίου και λήψη του reference (docRef)
+            const docRef = await addDoc(collection(db, "rooms"), {
                 code: roomCode,
-                teacherPrompt: compiledPrompt, // Το σύνθετο prompt
+                teacherPrompt: compiledPrompt,
                 maxMessages: parseInt(document.getElementById('max-messages').value),
                 apiKey: apiKey,
                 createdAt: serverTimestamp(),
                 status: 'active'
             });
 
+            // Ενημέρωση UI
             document.getElementById('room-info').style.display = 'block';
             document.getElementById('display-room-code').innerText = roomCode;
             localStorage.setItem('current_room_code', roomCode);
             document.getElementById('start-session-btn').style.display = 'none';
+
+            // Έναρξη παρακολούθησης (Περνάμε το ID του εγγράφου)
+            startLiveMonitoring(docRef.id);
 
         } catch (error) {
             console.error("Error creating room:", error);
             alert("Error creating room.");
         }
     });
+
+    // --- LIVE MONITORING FUNCTION ---
+    function startLiveMonitoring(roomDocId) {
+        console.log("Starting monitoring for:", roomDocId);
+        
+        const messagesRef = collection(db, "rooms", roomDocId, "messages");
+        const q = query(messagesRef, orderBy("timestamp", "asc"));
+
+        onSnapshot(q, (snapshot) => {
+            const grid = document.getElementById('students-grid');
+            
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "added") {
+                    const msg = change.doc.data();
+                    const studentId = msg.studentId;
+                    
+                    // Αν δεν υπάρχει κάρτα, φτιάξτην
+                    let card = document.getElementById(`card-${studentId}`);
+                    if (!card) {
+                        card = document.createElement('div');
+                        card.id = `card-${studentId}`;
+                        card.className = "student-card";
+                        card.style = "border:1px solid #ccc; padding:10px; border-radius:8px; background:#fff; height:300px; overflow-y:auto; box-shadow: 2px 2px 5px rgba(0,0,0,0.1);";
+                        card.innerHTML = `<h4 style="margin-top:0; border-bottom:1px solid #eee; color:#4A90E2;">${msg.studentName}</h4>`;
+                        grid.appendChild(card);
+                    }
+
+                    // Πρόσθεσε το μήνυμα
+                    const p = document.createElement('p');
+                    p.style.margin = "5px 0";
+                    p.style.fontSize = "0.9em";
+                    
+                    if (msg.sender === 'student') {
+                        p.innerHTML = `<strong>👤:</strong> ${msg.text}`;
+                        p.style.color = "#2c3e50";
+                    } else if (msg.sender === 'ai') {
+                        p.innerHTML = `<strong>🤖:</strong> ${msg.text}`;
+                        p.style.color = "#27ae60";
+                        p.style.background = "#f9f9f9";
+                        p.style.padding = "2px 5px";
+                        p.style.borderRadius = "4px";
+                    } else {
+                        p.innerHTML = `<em>${msg.text}</em>`;
+                        p.style.color = "#7f8c8d";
+                        p.style.fontSize = "0.8em";
+                        p.style.textAlign = "center";
+                    }
+
+                    card.appendChild(p);
+                    card.scrollTop = card.scrollHeight;
+                }
+            });
+        });
+    }
 }
