@@ -1,47 +1,208 @@
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: #f4f7f9;
+/* --- 1. VARIABLES & RESET --- */
+:root {
+    /* ΧΡΩΜΑΤΑ ΑΠΟ ΤΟ LOGO */
+    --brand-dark: #051e3e;      /* Το σκούρο μπλε του φόντου */
+    --brand-gold: #f1c40f;      /* Το χρυσό του ερωτηματικού */
+    --brand-cyan: #3498db;      /* Το γαλάζιο του κυκλώματος */
+    
+    /* UI COLORS */
+    --primary-color: var(--brand-dark); 
+    --accent-color: var(--brand-gold);
+    
+    --bg-color: #f4f6f8;        /* Πολύ απαλό γκρι-μπλε για φόντο */
+    --card-bg: #ffffff;
+    --text-main: #2c3e50;
+    --text-light: #ecf0f1;
+    --border-color: #dbe2e8;
+    
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 8px rgba(5, 30, 62, 0.15); /* Σκιά με απόχρωση του μπλε */
+    --radius: 12px;
+}
+
+* {
+    box-sizing: border-box;
     margin: 0;
-    display: flex;
-    justify-content: center;
-    padding: 20px;
+    padding: 0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
-#app {
-    width: 100%;
-    max-width: 500px;
-    background: white;
-    padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-
-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 2px solid #eee;
-    padding-bottom: 10px;
-}
-
-.screen {
+body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    line-height: 1.6;
+    height: 100vh;
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    margin-top: 30px;
 }
 
-.role-btn {
-    padding: 15px;
-    font-size: 18px;
-    border: none;
-    border-radius: 10px;
-    background-color: #4A90E2;
-    color: white;
+/* --- 2. LAYOUT & HEADER --- */
+.container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Εντυπωσιακός Τίτλος με το χρώμα του Logo */
+h1, h2, h3 {
+    color: var(--brand-dark); 
+    font-weight: 800;
+}
+
+#app-title {
+    text-align: center;
+    color: var(--brand-dark);
+    font-size: 2.8rem;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    border-bottom: 4px solid var(--brand-gold); /* Χρυσή γραμμή από κάτω */
+    display: inline-block;
+    align-self: center;
+    padding-bottom: 5px;
+}
+
+/* --- 3. CARDS --- */
+.card, .setup-card, .auth-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 25px;
+    box-shadow: var(--shadow-md);
+    border-top: 5px solid var(--brand-cyan); /* Γαλάζια γραμμή πάνω στην κάρτα */
+    margin-bottom: 20px;
+}
+
+/* --- 4. INPUTS --- */
+input, textarea, select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: 0.3s;
+    background: #fdfdfd;
+}
+
+input:focus, textarea:focus {
+    border-color: var(--brand-cyan);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+/* --- 5. BUTTONS (ΕΔΩ ΕΙΝΑΙ Η ΜΑΓΕΙΑ) --- */
+button {
     cursor: pointer;
-    transition: transform 0.2s;
+    font-weight: 700;
+    border: none;
+    border-radius: 8px;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
 }
 
-.role-btn:active {
-    transform: scale(0.98);
+/* Primary Button = Dark Blue (Επαγγελματικό) */
+.primary-btn, #start-session-btn, #join-room-btn {
+    background-color: var(--brand-dark) !important;
+    color: var(--brand-gold) !important; /* Χρυσά γράμματα στο Μπλε κουμπί */
+    padding: 14px 28px;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 6px rgba(5, 30, 62, 0.3);
+}
+
+.primary-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(5, 30, 62, 0.4);
+    filter: brightness(1.1);
+}
+
+/* Send Button (Chat) = Gold */
+#send-btn {
+    background-color: var(--brand-gold) !important;
+    color: var(--brand-dark) !important;
+    padding: 12px 20px;
+    font-size: 1.2rem;
+}
+
+#send-btn:hover {
+    background-color: #f39c12 !important;
+}
+
+/* Secondary Buttons */
+.secondary-btn {
+    background-color: var(--brand-cyan);
+    color: white;
+    padding: 8px 16px;
+}
+
+/* --- 6. CHAT UI --- */
+#student-chat-ui, #monitor-panel {
+    background: white;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    height: 80vh;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    display: flex; 
+    flex-direction: column;
+}
+
+/* Header του Chat */
+#monitor-panel > div:first-child, 
+#student-chat-ui > div:first-child {
+    background: var(--brand-dark) !important; /* Σκούρο μπλε header */
+    color: white !important;
+}
+
+/* Chat Area Background */
+#chat-messages, #monitor-chat-area {
+    background-color: #edf2f7;
+    flex: 1;
+}
+
+/* BUBBLES */
+
+/* User / Student Bubble (Cyan) */
+#chat-messages > div[style*="align-self: flex-end"],
+#monitor-chat-area div[style*="background: #dcedc8"] {
+    background: var(--brand-cyan) !important; 
+    color: white !important;
+    box-shadow: 0 2px 4px rgba(41, 128, 185, 0.2);
+    border-radius: 15px 15px 0 15px !important;
+}
+
+/* AI / Tutor Bubble (White with Gold border) */
+.ai-msg, 
+#monitor-chat-area div[style*="background: white"] {
+    background: white !important;
+    color: var(--text-main) !important;
+    border-left: 4px solid var(--brand-gold) !important; /* Χρυσή γραμμή αριστερά */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border-radius: 15px 15px 15px 0 !important;
+}
+
+/* --- 7. TEACHER DASHBOARD SIDEBAR --- */
+#teams-list div {
+    border-bottom: 1px solid #eee;
+    color: var(--text-main);
+}
+
+#teams-list div:hover {
+    background: #f0f4f8 !important;
+}
+
+/* Active Team (Gold Highlight) */
+#teams-list div[style*="background: #e3f2fd"] {
+    background: #fff9c4 !important; /* Απαλό κίτρινο */
+    border-left: 5px solid var(--brand-gold) !important;
+    font-weight: bold;
+    color: var(--brand-dark);
+}
+
+/* --- 8. RESPONSIVE --- */
+@media (max-width: 768px) {
+    #app-title { font-size: 2rem; }
+    .container { padding: 10px; }
 }
