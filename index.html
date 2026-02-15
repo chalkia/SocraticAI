@@ -4,33 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SocraticAI</title>
+    
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="css/style.css">
-    <meta name="theme-color" content="#4A90E2">
+    <link rel="icon" type="image/png" href="assets/icon-192.png">
     <link rel="apple-touch-icon" href="assets/icon-192.png">
+    <meta name="theme-color" content="#051e3e">
+
+    <link rel="stylesheet" href="assets/fontawesome/fontawesome.min.css">
+    
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div id="app">
-        <header>
-            <h1 id="app-title">SocraticAI</h1>
-            <select id="lang-selector">
-                <option value="gr">Ελληνικά</option>
-                <option value="en">English</option>
-            </select>
-        </header>
-
-        <main id="main-content">
-            <div id="auth-screen" class="screen">
-                <button id="btn-teacher" class="role-btn">Εκπαιδευτικός / Teacher</button>
-                <button id="btn-student" class="role-btn">Μαθητής / Student</button>
-            </div>
-            
-            <div id="teacher-screen" class="screen" style="display:none;"></div>
-            <div id="student-screen" class="screen" style="display:none;"></div>
-        </main>
+    
+    <div style="position:absolute; top:10px; right:10px; z-index:1000;">
+        <select id="language-selector" style="padding:5px; border-radius:5px; border:1px solid #ccc;">
+            <option value="gr">🇬🇷 Ελληνικά</option>
+            <option value="en">🇬🇧 English</option>
+        </select>
     </div>
+
+    <div class="container" id="app-container">
+        </div>
 
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
-------
