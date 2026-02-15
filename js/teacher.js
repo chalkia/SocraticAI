@@ -61,7 +61,7 @@ export function renderTeacherScreen(container, lang) {
                         <hr style="margin: 15px 0; border-top:1px dashed #ccc;">
 
                         <div class="api-box">
-                            <label><i class="fa-solid fa-key"></i><strong>Option A: Personal Key</strong></label>
+                            <label><i class="fa-solid fa-key"></i> <strong>Option A: Personal Key</strong></label>
                             <input type="password" id="personal-api-key" placeholder="Paste Gemini API Key" style="margin-bottom:5px;">
                             <button id="save-personal-key-btn" class="secondary-btn" style="width:100%;">Save Locally</button>
                         </div>
@@ -69,7 +69,7 @@ export function renderTeacherScreen(container, lang) {
                         <div style="text-align:center; margin: 10px 0; font-size:0.8em; color:#999;">- OR -</div>
 
                         <div class="api-box" style="background:#f9f9f9; padding:10px; border-radius:8px;">
-                            <label style="font-size:0.9em;"><i class="fa-solid fa-bolt"></i><strong>Option B: Workshop ID</strong></label>
+                            <label style="font-size:0.9em;"><i class="fa-solid fa-bolt"></i> <strong>Option B: Workshop ID</strong></label>
                             <div style="display:flex; gap:5px;">
                                 <input type="text" id="power-user-id" placeholder="ID" style="width:50%;">
                                 <input type="password" id="power-user-pin" placeholder="PIN" style="width:30%;">
@@ -85,7 +85,8 @@ export function renderTeacherScreen(container, lang) {
                     </div>
                 </div>
 
-            </div> </div>
+            </div>
+        </div>
 
         <div id="monitor-panel" style="display:none; height:85vh; padding:10px;">
             <div class="monitor-header">
@@ -118,7 +119,8 @@ export function renderTeacherScreen(container, lang) {
         const personalKey = document.getElementById('personal-api-key').value.trim();
         if (personalKey) {
             localStorage.setItem('gemini_api_key', personalKey);
-            statusEl.innerHTML = "<i class="fa-solid fa-check-circle"></i> Personal Key Saved!";
+            // ΔΙΟΡΘΩΣΗ: Μονά εισαγωγικά '...'
+            statusEl.innerHTML = '<i class="fa-solid fa-check-circle"></i> Personal Key Saved!';
             statusEl.style.color = "green";
             alert("Key Saved locally.");
         } else {
@@ -132,27 +134,32 @@ export function renderTeacherScreen(container, lang) {
         const pin = document.getElementById('power-user-pin').value.trim();
 
         if (!powerId || !pin) {
-            statusEl.innerHTML = "<i class="fa-solid fa-triangle-exclamation"></i> ID & PIN required";
+            // ΔΙΟΡΘΩΣΗ: Μονά εισαγωγικά '...'
+            statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ID & PIN required';
             return;
         }
 
-        statusEl.innerHTML = "<i class="fa-solid fa-spinner fa-spin"></i> Verifying...";
+        // ΔΙΟΡΘΩΣΗ: Μονά εισαγωγικά '...'
+        statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...';
         try {
             const docRef = doc(db, "configs", powerId);
             const docSnap = await getDoc(docRef);
 
             if (docSnap.exists() && docSnap.data().pin === pin) {
                 localStorage.setItem('gemini_api_key', docSnap.data().geminiKey);
-                statusEl.innerHTML = "<i class="fa-solid fa-check-circle"></i>Shared Key Loaded";
+                // ΔΙΟΡΘΩΣΗ: Μονά εισαγωγικά '...'
+                statusEl.innerHTML = '<i class="fa-solid fa-check-circle"></i> Shared Key Loaded';
                 statusEl.style.color = "green";
             } else {
-                statusEl.innerText = "Invalid ID/PIN";
+                // ΔΙΟΡΘΩΣΗ: Μονά εισαγωγικά '...'
+                statusEl.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Invalid ID/PIN';
                 statusEl.style.color = "red";
                 localStorage.removeItem('gemini_api_key');
             }
         } catch (error) {
             console.error(error);
-            statusEl.innerHTML= "<i class="fa-solid fa-circle-xmark"></i> Error";
+            // ΔΙΟΡΘΩΣΗ: Μονά εισαγωγικά '...'
+            statusEl.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Error';
         }
     });
 
@@ -263,9 +270,10 @@ RULES: ${rules}
             div.className = `msg-bubble ${msg.sender}`;
             
             if (msg.sender === 'student') {
-                div.innerHTML = `<strong>${msg.studentName}:</strong> ${msg.text}`;
+                // Εδώ χρησιμοποιούμε backticks ` ` άρα τα " " μέσα στο HTML είναι ΟΚ
+                div.innerHTML = `<strong><i class="fa-solid fa-user"></i> ${msg.studentName}:</strong> ${msg.text}`;
             } else if (msg.sender === 'ai') {
-                div.innerHTML = `<strong>🤖 AI:</strong> ${msg.text}`;
+                div.innerHTML = `<strong><i class="fa-solid fa-brain"></i> AI:</strong> ${msg.text}`;
             } else {
                 div.innerHTML = `<em>${msg.text}</em>`;
             }
