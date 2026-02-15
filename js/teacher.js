@@ -86,6 +86,10 @@ export function renderTeacherScreen(container, lang) {
                 <h2 style="margin:0; color:white;">${getTranslation(lang, 'dashboard_monitor_title')}</h2>
                 <div class="room-code-badge">Code: <span id="monitor-room-code">---</span></div>
             </div>
+            <div class="monitor-controls" style="padding: 10px; background: #eee; display: flex; gap: 10px;">
+                <textarea id="live-prompt-update" placeholder="Update instructions for AI..." style="flex:1; margin:0;"></textarea>
+                <button id="update-prompt-btn" class="secondary-btn"><i class="fa-solid fa-sync"></i> Update AI</button>
+            </div
             <div class="monitor-grid">
                 <div class="monitor-sidebar">
                     <div class="sidebar-header">${getTranslation(lang, 'dashboard_active_teams')}</div>
