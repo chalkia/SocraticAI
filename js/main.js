@@ -1,51 +1,65 @@
-// 1. ΟΛΑ ΤΑ IMPORTS ΣΤΗΝ ΚΟΡΥΦΗ
-import { updateUI, translations } from './i18n.js';
+import { translations, getTranslation } from './i18n.js';
 import { renderTeacherScreen } from './teacher.js';
-import { renderStudentScreen } from './student.js'; // <--- Τώρα είναι σωστά εδώ πάνω!
+import { renderStudentScreen } from './student.js';
 
-let currentLang = localStorage.getItem('lang') || 'gr';
+// Ανάκτηση γλώσσας από τη μνήμη ή προεπιλογή 'gr'
+let currentLang = localStorage.getItem('socratic_lang') || 'gr';
 
-// Αρχικοποίηση γλώσσας στο UI
-document.getElementById('lang-selector').value = currentLang;
-updateUI(currentLang);
+document.addEventListener('DOMContentLoaded', () => {
+    // Ρύθμιση γλώσσας στο HTML tag
+    document.documentElement.lang = currentLang;
 
-// Listener για αλλαγή γλώσσας
-document.getElementById('lang-selector').addEventListener('change', (e) => {
-    currentLang = e.target.value;
-    localStorage.setItem('lang', currentLang);
-    updateUI(currentLang);
-    
-    // Αν είμαστε ήδη σε κάποια οθόνη, την ξανασχεδιάζουμε στη νέα γλώσσα
-    const teacherScreen = document.getElementById('teacher-screen');
-    const studentScreen = document.getElementById('student-screen');
-
-    if (teacherScreen.style.display === 'block') {
-        renderTeacherScreen(teacherScreen, currentLang);
-    } else if (studentScreen.style.display === 'block') {
-        renderStudentScreen(studentScreen, currentLang);
+    // Διαχείριση του Language Selector (αν υπάρχει στο HTML)
+    const langSelector = document.getElementById('language-selector');
+    if (langSelector) {
+        langSelector.value = currentLang;
+        langSelector.addEventListener('change', (e) => {
+            currentLang = e.target.value;
+            localStorage.setItem('socratic_lang', currentLang);
+            document.documentElement.lang = currentLang;
+            
+            // Ανανέωση της οθόνης ανάλογα με το πού βρισκόμαστε
+            // (Προς το παρόν κάνουμε reload την αρχική για απλότητα)
+            renderWelcomeScreen();
+        });
     }
+
+    // Φόρτωση της Αρχικής Οθόνης
+    renderWelcomeScreen();
 });
 
-// Χειρισμός κουμπιού ΕΚΠΑΙΔΕΥΤΙΚΟΥ
-document.getElementById('btn-teacher').addEventListener('click', () => {
-    switchScreen('teacher-screen');
-    renderTeacherScreen(document.getElementById('teacher-screen'), currentLang);
-});
+function renderWelcomeScreen() {
+    const appContainer = document.getElementById('app-container');
+    
+    // ΚΑΘΑΡΙΣΜΟΣ & ΝΕΟ HTML (Με Λογότυπο & Icons)
+    appContainer.innerHTML = `
+        <div class="welcome-container">
+            <img src="assets/icon-512.png" alt="SocraticAI Logo" class="welcome-logo">
+            
+            <h1 class="welcome-title">${getTranslation(currentLang, 'title')}</h1>
+            
+            <p class="welcome-description">
+                ${getTranslation(currentLang, 'app_description')}
+            </p>
+            
+            <div class="role-selection">
+                <button id="btn-teacher" class="role-btn teacher-role">
+                    <i class="fa-solid fa-chalkboard-user"></i> ${getTranslation(currentLang, 'teacher_btn')}
+                </button>
+                <button id="btn-student" class="role-btn student-role">
+                    <i class="fa-solid fa-graduation-cap"></i> ${getTranslation(currentLang, 'student_btn')}
+                </button>
+            </div>
+        </div>
+    `;
 
-// Χειρισμός κουμπιού ΜΑΘΗΤΗ (Καθαρό και σωστό)
-document.getElementById('btn-student').addEventListener('click', () => {
-    switchScreen('student-screen');
-    renderStudentScreen(document.getElementById('student-screen'), currentLang);
-});
+    // --- Event Listeners για τα Κουμπιά ---
 
-// Βοηθητική συνάρτηση εναλλαγής οθονών
-function switchScreen(screenId) {
-    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
-    document.getElementById(screenId).style.display = 'block';
-}
+    document.getElementById('btn-teacher').addEventListener('click', () => {
+        renderTeacherScreen(appContainer, currentLang);
+    });
 
-// Register Service Worker για PWA
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js')
-    .then(() => console.log("SocraticAI: Service Worker Registered"));
+    document.getElementById('btn-student').addEventListener('click', () => {
+        renderStudentScreen(appContainer, currentLang);
+    });
 }
