@@ -4,6 +4,12 @@ import { askGemini } from './gemini-api.js';
 import { getTranslation } from './i18n.js';
 
 export function renderStudentScreen(container, lang) {
+    // Αν δεν έχει οριστεί γλώσσα, προεπιλογή Ελληνικά
+    if (!localStorage.getItem('socratic_lang')) {
+        localStorage.setItem('socratic_lang', 'gr');
+        lang = 'gr';
+    }
+
     container.innerHTML = `
         <div id="student-setup" class="dashboard-container">
             <div class="header-section">
@@ -20,6 +26,14 @@ export function renderStudentScreen(container, lang) {
                 <div class="form-group">
                     <label><strong>${getTranslation(lang, 'room_code_placeholder')}</strong></label>
                     <input type="text" id="room-code-input" placeholder="ROOM-XXXX" style="text-transform:uppercase;">
+                </div>
+
+                <div class="form-group" style="text-align:center; margin-bottom:20px;">
+                    <label style="font-size:0.9em; color:#666;"><i class="fa-solid fa-language"></i> Language / Γλώσσα</label>
+                    <select id="card-lang-selector" style="padding:8px; border-radius:5px; border:1px solid #ccc; width:100%; font-size:1em;">
+                        <option value="gr" ${lang === 'gr' ? 'selected' : ''}>🇬🇷 Ελληνικά</option>
+                        <option value="en" ${lang === 'en' ? 'selected' : ''}>🇬🇧 English</option>
+                    </select>
                 </div>
 
                 <button id="join-room-btn" class="primary-btn big-start-btn">
@@ -54,6 +68,13 @@ export function renderStudentScreen(container, lang) {
         </div>
     `;
 
+    // --- CHANGE LANGUAGE LOGIC ---
+    document.getElementById('card-lang-selector').addEventListener('change', (e) => {
+        const newLang = e.target.value;
+        localStorage.setItem('socratic_lang', newLang);
+        location.reload(); // Ανανέωση για να εφαρμοστεί η γλώσσα
+    });
+
     // --- LOGIC VARIABLES ---
     let currentRoomData = null;
     let currentRoomDocId = null;
@@ -85,7 +106,6 @@ export function renderStudentScreen(container, lang) {
                 errorEl.innerText = getTranslation(lang, 'room_not_found');
             } else {
                 const docSnap = querySnapshot.docs[0];
-                // Έλεγχος αν το δωμάτιο είναι ενεργό
                 if (docSnap.data().status !== 'active') {
                     errorEl.innerText = "Το δωμάτιο δεν είναι ενεργό.";
                     return;
@@ -98,10 +118,12 @@ export function renderStudentScreen(container, lang) {
                 studentId = 'std-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
                 chatHistory = []; 
 
-                // UI Switch
+                // --- UI Switch ---
+                // Κρύβουμε το setup (άρα και την επιλογή γλώσσας) και δείχνουμε το chat
                 document.getElementById('student-setup').style.display = 'none';
                 document.getElementById('student-chat-ui').style.display = 'flex';
                 document.getElementById('room-display').innerHTML = `<i class="fa-solid fa-door-open"></i> ${code}`;
+                
                 updateCounter();
 
                 // Listen for Broadcasts & Teacher Messages
@@ -116,7 +138,7 @@ export function renderStudentScreen(container, lang) {
         }
     });
 
-    // 2. REALTIME LISTENER (Για Broadcasts & History)
+    // 2. REALTIME LISTENER
     function startRealtimeListener(roomId) {
         const q = query(collection(db, "rooms", roomId, "messages"), orderBy("timestamp", "asc"));
         
@@ -125,16 +147,10 @@ export function renderStudentScreen(container, lang) {
                 if (change.type === "added") {
                     const msg = change.doc.data();
                     
-                    // Εμφανίζουμε: 
-                    // 1. Τα δικά μας μηνύματα (studentId)
-                    // 2. Μηνύματα καθηγητή (Broadcast ή Direct)
-                    // 3. Απαντήσεις AI που αφορούν εμάς
                     if (msg.studentId === studentId || msg.sender === 'teacher' || (msg.sender === 'ai' && msg.studentId === studentId)) {
-                        
-                        // Αν το μήνυμα δεν υπάρχει ήδη στο UI (αποφυγή διπλοτύπων από το local addMessageUI)
                         const existingMsg = document.getElementById(`msg-${msg.timestamp?.toMillis ? msg.timestamp.toMillis() : 'temp'}`);
                         if (!existingMsg) {
-                            addMessageUI(msg.text, msg.sender, msg.image || null, false); // false = not local instant render
+                            addMessageUI(msg.text, msg.sender, msg.image || null, false);
                         }
                     }
                 }
@@ -178,13 +194,11 @@ export function renderStudentScreen(container, lang) {
 
         if ((!text && !selectedImageBase64) || questionsLeft <= 0) return;
 
-        // 1. Εμφάνισε το άμεσα στον χρήστη (Optimistic UI)
         addMessageUI(text, 'student', selectedImageBase64, true);
         
         const imageToSend = selectedImageBase64;
-        const msgText = text; // Κρατάμε το κείμενο πριν καθαρίσουμε
+        const msgText = text;
 
-        // Reset inputs
         inputEl.value = '';
         selectedImageBase64 = null;
         document.getElementById('img-preview-container').style.display = 'none';
@@ -193,10 +207,9 @@ export function renderStudentScreen(container, lang) {
         questionsLeft--;
         updateCounter();
 
-        // 2. Log to Firestore
         await logMessageToDB("student", msgText, imageToSend);
 
-        // 3. Prepare Gemini Prompt
+        // Prepare Gemini Prompt
         let fullPrompt = `System Instruction: ${currentRoomData.teacherPrompt}\n\n`;
         const recentHistory = chatHistory.slice(-6); 
         if (recentHistory.length > 0) {
@@ -211,24 +224,16 @@ export function renderStudentScreen(container, lang) {
 
         chatHistory.push({ role: 'user', text: msgText });
 
-        // 4. Show Loading Indicator
         const loadingId = addMessageUI(getTranslation(lang, 'thinking'), 'ai-loading');
 
-        // 5. Call Gemini API
         try {
             const response = await askGemini(fullPrompt, currentRoomData.apiKey, imageToSend);
-            
-            // Remove loading and show real response
             const loadingEl = document.getElementById(loadingId);
             if (loadingEl) loadingEl.remove();
 
             await logMessageToDB("ai", response);
             chatHistory.push({ role: 'ai', text: response });
             
-            // Το UI θα ενημερωθεί αυτόματα από τον Realtime Listener ή μπορούμε να το κάνουμε manual αν θέλουμε πιο γρήγορα
-            // Εδώ αφήνουμε τον listener να το κάνει για συνέπεια, ή το προσθέτουμε manual αν καθυστερεί η βάση.
-            // Για τώρα, αφήνουμε τον listener να το πιάσει από το "added" event.
-
         } catch (error) {
             console.error(error);
             const loadingEl = document.getElementById(loadingId);
@@ -242,10 +247,16 @@ export function renderStudentScreen(container, lang) {
     // --- HELPER FUNCTIONS ---
 
     async function triggerSystemGreeting() {
-        // Καλούμε το AI να χαιρετήσει με βάση το Prompt
+        const targetLanguage = lang === 'gr' ? 'Greek' : 'English';
+        
         const greetingPrompt = `
         System Instruction: ${currentRoomData.teacherPrompt}
-        Task: Introduce yourself to the student named "${studentName}" based on the role and topic above. Keep it brief and welcoming.
+        
+        IMMEDIATE TASK:
+        1. Introduce yourself to the student named "${studentName}".
+        2. Briefly state the topic defined in the system instructions.
+        3. EXTREMELY IMPORTANT: Your output must be STRICTLY in ${targetLanguage}.
+        4. Do not use any other language.
         `;
         
         const loadingId = addMessageUI(getTranslation(lang, 'thinking'), 'ai-loading');
@@ -270,7 +281,7 @@ export function renderStudentScreen(container, lang) {
                 studentName: studentName,
                 sender: senderRole,
                 text: messageText,
-                image: image, // Αποθηκεύουμε και την εικόνα αν υπάρχει
+                image: image,
                 timestamp: serverTimestamp()
             });
         } catch (error) {
@@ -294,9 +305,8 @@ export function renderStudentScreen(container, lang) {
         const div = document.createElement('div');
         const id = 'msg-' + Date.now();
         div.id = id;
-        div.className = `msg-bubble ${type}`; // Χρήση των CSS classes που φτιάξαμε
+        div.className = `msg-bubble ${type}`;
 
-        // Icon Selection
         let iconClass = 'fa-brain';
         let senderName = 'AI';
         
