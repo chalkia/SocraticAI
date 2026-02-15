@@ -245,4 +245,83 @@ export function renderStudentScreen(container, lang) {
         // Καλούμε το AI να χαιρετήσει με βάση το Prompt
         const greetingPrompt = `
         System Instruction: ${currentRoomData.teacherPrompt}
-        Task: Introduce yourself to the student named "${studentName}"
+        Task: Introduce yourself to the student named "${studentName}" based on the role and topic above. Keep it brief and welcoming.
+        `;
+        
+        const loadingId = addMessageUI(getTranslation(lang, 'thinking'), 'ai-loading');
+        
+        try {
+            const response = await askGemini(greetingPrompt, currentRoomData.apiKey);
+            document.getElementById(loadingId).remove();
+            
+            await logMessageToDB("ai", response);
+            chatHistory.push({ role: 'ai', text: response });
+        } catch (e) {
+            console.error("Greeting Error", e);
+            document.getElementById(loadingId).remove();
+        }
+    }
+
+    async function logMessageToDB(senderRole, messageText, image = null) {
+        if (!currentRoomDocId) return;
+        try {
+            await addDoc(collection(db, "rooms", currentRoomDocId, "messages"), {
+                studentId: studentId,
+                studentName: studentName,
+                sender: senderRole,
+                text: messageText,
+                image: image, // Αποθηκεύουμε και την εικόνα αν υπάρχει
+                timestamp: serverTimestamp()
+            });
+        } catch (error) {
+            console.error("Error logging:", error);
+        }
+    }
+
+    function updateCounter() {
+        const badge = document.getElementById('questions-left');
+        badge.innerText = `${questionsLeft} ${getTranslation(lang, 'questions_left')}`;
+        
+        if (questionsLeft === 0) {
+            badge.style.background = 'gray';
+            document.getElementById('user-input').disabled = true;
+            document.getElementById('user-input').placeholder = getTranslation(lang, 'no_questions');
+        }
+    }
+
+    function addMessageUI(text, type, img = null, isLocal = false) {
+        const chatBox = document.getElementById('chat-messages');
+        const div = document.createElement('div');
+        const id = 'msg-' + Date.now();
+        div.id = id;
+        div.className = `msg-bubble ${type}`; // Χρήση των CSS classes που φτιάξαμε
+
+        // Icon Selection
+        let iconClass = 'fa-brain';
+        let senderName = 'AI';
+        
+        if (type === 'student' || type === 'user') {
+            iconClass = 'fa-user';
+            senderName = studentName;
+        } else if (type === 'teacher') {
+            iconClass = 'fa-chalkboard-user';
+            senderName = 'Teacher';
+        } else if (type === 'ai-loading') {
+            iconClass = 'fa-spinner fa-spin';
+            senderName = 'AI';
+        }
+
+        let contentHtml = `<strong><i class="fa-solid ${iconClass}"></i> ${senderName}:</strong> `;
+        
+        if (img) {
+            contentHtml += `<br><img src="${img}" style="max-width:200px; border-radius:8px; margin-top:5px; border:1px solid #ccc;"><br>`;
+        }
+        
+        contentHtml += text;
+        div.innerHTML = contentHtml;
+
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        return id;
+    }
+}
