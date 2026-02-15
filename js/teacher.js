@@ -37,6 +37,13 @@ export function renderTeacherScreen(container, lang) {
                         <label><strong>${getTranslation(lang, 'lbl_rules')}</strong></label>
                         <textarea id="setup-rules" class="input-lg" placeholder="${getTranslation(lang, 'ph_rules')}"></textarea>
                     </div>
+                    <div class="api-box" style="margin-top:10px; border: 1px solid #ddd; padding:10px;">
+                         <label><i class="fa-solid fa-clock-rotate-left"></i> Resume Active Session</label>
+                         <div style="display:flex; gap:5px;">
+                             <input type="text" id="resume-room-id" placeholder="Paste Room Document ID">
+                             <button id="resume-btn" class="secondary-btn"><i class="fa-solid fa-right-to-bracket"></i></button>
+                         </div>
+                    </div> 
                 </div>
 
                 <div class="sidebar-col">
