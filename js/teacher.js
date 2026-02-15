@@ -166,7 +166,15 @@ TARGET AUDIENCE: ${grade}
 GOALS: ${goal}
 METHOD: ${method}
 RULES: ${rules}
+STRICT INSTRUCTIONS:
+1. Your VERY FIRST message MUST be a greeting in both Greek and English.
+2. Clearly state the TOPIC: "${context}"
+3. Explicitly tell the students: "I will only answer questions related to this topic."
+4. If a student asks something irrelevant, politely decline and guide them back to the topic.
+5. Use the Socratic method: do not give direct answers, ask leading questions instead.
+6. Βe precise and not talkative
         `.trim();
+        
 
         const roomCode = 'ROOM-' + Math.floor(1000 + Math.random() * 9000);
 
