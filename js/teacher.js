@@ -15,7 +15,7 @@ export function renderTeacherScreen(container, lang) {
             <div class="teacher-grid">
                 
                 <div class="card prompt-card">
-                    <h3>🛠️ 1. AI Instructions</h3>
+                    <h3><i class="fa-solid fa-robot"></i> 1. AI Instructions</h3>
                     
                     <div class="form-group">
                         <label><strong>${getTranslation(lang, 'lbl_context')}</strong></label>
@@ -46,7 +46,7 @@ export function renderTeacherScreen(container, lang) {
 
                 <div class="sidebar-col">
                     <div class="card auth-card sticky-card">
-                        <h3>⚙️ 2. Settings & Launch</h3>
+                        <h3><i class="fa-solid fa-sliders"></i> 2. Settings & Launch</h3>
                         
                         <div class="settings-box" style="margin-bottom:15px;">
                             <label>Max Questions / Group:</label>
@@ -61,7 +61,7 @@ export function renderTeacherScreen(container, lang) {
                         <hr style="margin: 15px 0; border-top:1px dashed #ccc;">
 
                         <div class="api-box">
-                            <label>🔑 <strong>Option A: Personal Key</strong></label>
+                            <label><i class="fa-solid fa-key"></i><strong>Option A: Personal Key</strong></label>
                             <input type="password" id="personal-api-key" placeholder="Paste Gemini API Key" style="margin-bottom:5px;">
                             <button id="save-personal-key-btn" class="secondary-btn" style="width:100%;">Save Locally</button>
                         </div>
@@ -69,18 +69,18 @@ export function renderTeacherScreen(container, lang) {
                         <div style="text-align:center; margin: 10px 0; font-size:0.8em; color:#999;">- OR -</div>
 
                         <div class="api-box" style="background:#f9f9f9; padding:10px; border-radius:8px;">
-                            <label style="font-size:0.9em;">⚡ <strong>Option B: Workshop ID</strong></label>
+                            <label style="font-size:0.9em;"><i class="fa-solid fa-bolt"></i><strong>Option B: Workshop ID</strong></label>
                             <div style="display:flex; gap:5px;">
                                 <input type="text" id="power-user-id" placeholder="ID" style="width:50%;">
                                 <input type="password" id="power-user-pin" placeholder="PIN" style="width:30%;">
-                                <button id="load-config-btn" style="width:20%; padding:0;">📥</button>
+                                <button id="load-config-btn" style="width:20%; padding:0;"><i class="fa-solid fa-download"></i></button>
                             </div>
                         </div>
 
                         <p id="key-status-text" class="status-text" style="text-align:center; margin-top:10px; font-weight:bold; color:#666;">No Key Loaded</p>
 
                         <button id="start-session-btn" class="primary-btn big-start-btn" style="margin-top:20px;">
-                            START CLASS 🚀
+                            START CLASS <i class="fa-solid fa-play"></i>
                         </button>
                     </div>
                 </div>
@@ -118,7 +118,7 @@ export function renderTeacherScreen(container, lang) {
         const personalKey = document.getElementById('personal-api-key').value.trim();
         if (personalKey) {
             localStorage.setItem('gemini_api_key', personalKey);
-            statusEl.innerText = "✅ Personal Key Saved!";
+            statusEl.innerHTML = "<i class="fa-solid fa-check-circle"></i> Personal Key Saved!";
             statusEl.style.color = "green";
             alert("Key Saved locally.");
         } else {
@@ -132,27 +132,27 @@ export function renderTeacherScreen(container, lang) {
         const pin = document.getElementById('power-user-pin').value.trim();
 
         if (!powerId || !pin) {
-            statusEl.innerText = "⚠️ ID & PIN required";
+            statusEl.innerHTML = "<i class="fa-solid fa-triangle-exclamation"></i> ID & PIN required";
             return;
         }
 
-        statusEl.innerText = "⏳ Verifying...";
+        statusEl.innerHTML = "<i class="fa-solid fa-spinner fa-spin"></i> Verifying...";
         try {
             const docRef = doc(db, "configs", powerId);
             const docSnap = await getDoc(docRef);
 
             if (docSnap.exists() && docSnap.data().pin === pin) {
                 localStorage.setItem('gemini_api_key', docSnap.data().geminiKey);
-                statusEl.innerText = "✅ Shared Key Loaded";
+                statusEl.innerHTML = "<i class="fa-solid fa-check-circle"></i>Shared Key Loaded";
                 statusEl.style.color = "green";
             } else {
-                statusEl.innerText = "❌ Invalid ID/PIN";
+                statusEl.innerText = "Invalid ID/PIN";
                 statusEl.style.color = "red";
                 localStorage.removeItem('gemini_api_key');
             }
         } catch (error) {
             console.error(error);
-            statusEl.innerText = "❌ Error";
+            statusEl.innerHTML= "<i class="fa-solid fa-circle-xmark"></i> Error";
         }
     });
 
