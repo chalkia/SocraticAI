@@ -1,4 +1,4 @@
-const CACHE_NAME = 'socratic-ai-v1';
+const CACHE_NAME = 'socraticAI-v1.01';
 const ASSETS = [
   './',
   './index.html',
