@@ -43,55 +43,55 @@ export function renderTeacherScreen(container, lang) {
                         <textarea id="setup-rules" class="input-lg" placeholder="${getTranslation(lang, 'ph_rules')}"></textarea>
                     </div>
                 </div>
+<div class="sidebar-col">
+    <div class="card auth-card sticky-card">
+        <h3><i class="fa-solid fa-sliders"></i> 2. ${getTranslation(lang, 'settings_and_launch')}</h3>
+        
+        <div class="settings-box" style="margin-bottom:15px;">
+            <label>${getTranslation(lang, 'max_questions_lbl')}:</label>
+            <input type="number" id="max-messages" value="15" style="font-size:1.1em; padding:8px;">
+        </div>
 
-                <div class="sidebar-col">
-                    <div class="card auth-card sticky-card">
-                        <h3><i class="fa-solid fa-sliders"></i> 2. Settings & Launch</h3>
-                        
-                        <div class="settings-box" style="margin-bottom:15px;">
-                            <label>Max Questions / Group:</label>
-                            <input type="number" id="max-messages" value="15" style="font-size:1.1em; padding:8px;">
-                        </div>
+        <div class="settings-box" style="margin-bottom:20px;">
+            <input type="checkbox" id="research-consent-check">
+            <label for="research-consent-check" style="display:inline; font-weight:normal;">${getTranslation(lang, 'research_consent')}</label>
+        </div>
 
-                        <div class="settings-box" style="margin-bottom:20px;">
-                            <input type="checkbox" id="research-consent-check">
-                            <label for="research-consent-check" style="display:inline; font-weight:normal;">${getTranslation(lang, 'research_consent')}</label>
-                        </div>
+        <hr style="margin: 15px 0; border-top:1px dashed #ccc;">
 
-                        <hr style="margin: 15px 0; border-top:1px dashed #ccc;">
+        <div class="api-box">
+            <label><i class="fa-solid fa-key"></i> <strong>${getTranslation(lang, 'option_a_title')}</strong></label>
+            <input type="password" id="personal-api-key" placeholder="${getTranslation(lang, 'api_key_placeholder')}" style="margin-bottom:5px;">
+            <button id="save-personal-key-btn" class="secondary-btn" style="width:100%;">${getTranslation(lang, 'btn_save_local')}</button>
+        </div>
 
-                        <div class="api-box">
-                            <label><i class="fa-solid fa-key"></i> <strong>Option A: Personal Key</strong></label>
-                            <input type="password" id="personal-api-key" placeholder="Paste Gemini API Key" style="margin-bottom:5px;">
-                            <button id="save-personal-key-btn" class="secondary-btn" style="width:100%;">Save Locally</button>
-                        </div>
+        <div style="text-align:center; margin: 10px 0; font-size:0.8em; color:#999;">- ${getTranslation(lang, 'or_text')} -</div>
 
-                        <div style="text-align:center; margin: 10px 0; font-size:0.8em; color:#999;">- OR -</div>
+        <div class="api-box" style="background:#f9f9f9; padding:10px; border-radius:8px;">
+            <label style="font-size:0.9em;"><i class="fa-solid fa-bolt"></i> <strong>${getTranslation(lang, 'option_b_title')}</strong></label>
+            <div style="display:flex; gap:5px;">
+                <input type="text" id="power-user-id" placeholder="ID" style="width:50%;">
+                <input type="password" id="power-user-pin" placeholder="PIN" style="width:30%;">
+                <button id="load-config-btn" style="width:20%; padding:0;"><i class="fa-solid fa-download"></i></button>
+            </div>
+        </div>
 
-                        <div class="api-box" style="background:#f9f9f9; padding:10px; border-radius:8px;">
-                            <label style="font-size:0.9em;"><i class="fa-solid fa-bolt"></i> <strong>Option B: Workshop Mode</strong></label>
-                            <div style="display:flex; gap:5px;">
-                                <input type="text" id="power-user-id" placeholder="ID" style="width:50%;">
-                                <input type="password" id="power-user-pin" placeholder="PIN" style="width:30%;">
-                                <button id="load-config-btn" style="width:20%; padding:0;"><i class="fa-solid fa-download"></i></button>
-                            </div>
-                        </div>
+        <div class="api-box" style="margin-top:15px; border: 1px dashed var(--brand-cyan); padding:10px; border-radius:8px;">
+            <label style="font-size:0.9em;"><i class="fa-solid fa-clock-rotate-left"></i> <strong>${getTranslation(lang, 'resume_session_title')}</strong></label>
+            <div style="display:flex; gap:5px;">
+                <input type="text" id="resume-room-id" placeholder="Document ID" style="font-size:0.8em;">
+                <button id="resume-btn" class="secondary-btn" style="padding:5px 10px;"><i class="fa-solid fa-right-to-bracket"></i></button>
+            </div>
+        </div>
 
-                        <div class="api-box" style="margin-top:15px; border: 1px dashed var(--brand-cyan); padding:10px; border-radius:8px;">
-                            <label style="font-size:0.9em;"><i class="fa-solid fa-clock-rotate-left"></i> <strong>Resume Active Session</strong></label>
-                            <div style="display:flex; gap:5px;">
-                                <input type="text" id="resume-room-id" placeholder="Paste Room ID" style="font-size:0.8em;">
-                                <button id="resume-btn" class="secondary-btn" style="padding:5px 10px;"><i class="fa-solid fa-right-to-bracket"></i></button>
-                            </div>
-                        </div>
+        <p id="key-status-text" class="status-text" style="text-align:center; margin-top:10px; font-weight:bold; color:#666;">${getTranslation(lang, 'no_key_loaded')}</p>
 
-                        <p id="key-status-text" class="status-text" style="text-align:center; margin-top:10px; font-weight:bold; color:#666;">No Key Loaded</p>
-
-                        <button id="start-session-btn" class="primary-btn big-start-btn" style="margin-top:20px;">
-                            START CLASS <i class="fa-solid fa-play"></i>
-                        </button>
-                    </div>
-                </div>
+        <button id="start-session-btn" class="primary-btn big-start-btn" style="margin-top:20px;">
+            ${getTranslation(lang, 'btn_start_class')} <i class="fa-solid fa-play"></i>
+        </button>
+    </div>
+</div>
+                
             </div>
         </div>
 
