@@ -1,42 +1,230 @@
-/* --- VARIABLES --- */
-:root {
-    --brand-dark: #051e3e;
-    --brand-gold: #f1c40f;
-    --brand-cyan: #3498db;
-    --bg-color: #f8f9fa;
-    --card-bg: #ffffff;
-    --text-main: #2c3e50;
-    --border-color: #e2e8f0;
-    --radius: 12px;
-    --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+/* =========================================
+   1. LOCAL FONTS (ROBOTO)
+   ========================================= */
+@font-face {
+    font-family: 'Roboto';
+    src: url('../assets/fonts/Roboto-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
 }
 
-* { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
-body { background: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; min-height: 100vh; }
+@font-face {
+    font-family: 'Roboto';
+    src: url('../assets/fonts/Roboto-Italic.ttf') format('truetype');
+    font-weight: 400;
+    font-style: italic;
+    font-display: swap;
+}
 
-/* --- TYPOGRAPHY --- */
-h2 { color: var(--brand-dark); font-weight: 800; margin-bottom: 5px; }
-h3 { color: var(--brand-cyan); font-weight: 700; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-.subtitle { color: #666; margin-bottom: 20px; font-size: 0.95em; }
+@font-face {
+    font-family: 'Roboto';
+    src: url('../assets/fonts/Roboto-Medium.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
 
-/* --- LAYOUT GRID (THE MAGIC) --- */
-.dashboard-container { max-width: 1200px; margin: 0 auto; }
+@font-face {
+    font-family: 'Roboto';
+    src: url('../assets/fonts/Roboto-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
 
-/* Desktop: 2 Στήλες (2fr 1fr) */
+/* =========================================
+   2. VARIABLES & RESET
+   ========================================= */
+:root {
+    /* Brand Colors */
+    --brand-dark: #051e3e;      /* Navy Blue - Primary */
+    --brand-gold: #f1c40f;      /* Gold - Accent */
+    --brand-cyan: #3498db;      /* Cyan - Secondary/Info */
+    --brand-success: #27ae60;   /* Green - Action */
+    --brand-danger: #e74c3c;    /* Red - Alert */
+
+    /* UI Colors */
+    --bg-color: #f4f6f8;
+    --card-bg: #ffffff;
+    --text-main: #2c3e50;
+    --text-muted: #7f8c8d;
+    --border-color: #dbe2e8;
+    
+    /* Spacing & Effects */
+    --radius: 12px;
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 12px rgba(5, 30, 62, 0.15);
+    --transition: all 0.3s ease;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Roboto', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* =========================================
+   3. TYPOGRAPHY & UTILITIES
+   ========================================= */
+h1, h2, h3, h4 {
+    color: var(--brand-dark);
+    margin-bottom: 0.5em;
+}
+
+a { text-decoration: none; color: var(--brand-cyan); }
+
+.container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Animation Utilities */
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* =========================================
+   4. WELCOME SCREEN (HOMEPAGE)
+   ========================================= */
+.welcome-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 85vh;
+    max-width: 800px;
+    margin: 0 auto;
+    animation: fadeInDown 0.6s ease-out;
+}
+
+.welcome-logo {
+    width: 140px;
+    height: 140px;
+    margin-bottom: 25px;
+    border-radius: 24px;
+    box-shadow: var(--shadow-md);
+    transition: var(--transition);
+}
+.welcome-logo:hover { transform: scale(1.05); }
+
+.welcome-title {
+    font-size: 2.8rem;
+    color: var(--brand-dark);
+    margin-bottom: 20px;
+    font-weight: 800;
+    border-bottom: 5px solid var(--brand-gold);
+    display: inline-block;
+    padding-bottom: 5px;
+}
+
+.welcome-description {
+    font-size: 1.15rem;
+    color: #555;
+    line-height: 1.7;
+    margin-bottom: 50px;
+    max-width: 720px;
+}
+
+.role-selection {
+    display: flex;
+    gap: 20px;
+    width: 100%;
+    max-width: 600px;
+    justify-content: center;
+}
+
+.role-btn {
+    flex: 1;
+    padding: 18px;
+    font-size: 1.1rem;
+    border-radius: var(--radius);
+    transition: var(--transition);
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    border: none;
+    box-shadow: var(--shadow-md);
+}
+
+/* Teacher Button Style */
+.teacher-role {
+    background: white;
+    color: var(--brand-dark);
+    border: 2px solid var(--brand-dark);
+}
+.teacher-role:hover {
+    background: var(--brand-dark);
+    color: white;
+    transform: translateY(-3px);
+}
+
+/* Student Button Style */
+.student-role {
+    background: var(--brand-dark);
+    color: white;
+    border: 2px solid var(--brand-dark);
+}
+.student-role:hover {
+    background: var(--brand-gold);
+    color: var(--brand-dark);
+    border-color: var(--brand-gold);
+    transform: translateY(-3px);
+}
+
+/* =========================================
+   5. TEACHER DASHBOARD (GRID LAYOUT)
+   ========================================= */
+.dashboard-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 10px;
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.header-section { margin-bottom: 25px; }
+.subtitle { color: var(--text-muted); font-size: 1rem; }
+
+/* Grid System for Large Screens */
 @media (min-width: 900px) {
     .teacher-grid {
         display: grid;
-        grid-template-columns: 2fr 1fr; /* Το Prompt πιάνει περισσότερο χώρο */
+        grid-template-columns: 2fr 1fr; /* 2/3 Prompt, 1/3 Settings */
         gap: 25px;
-        align-items: start; /* Για να μην τεντώνει το ύψος */
+        align-items: start;
     }
     .sticky-card {
         position: sticky;
-        top: 20px; /* Για να μένει σταθερό όταν κάνεις scroll */
+        top: 20px;
     }
 }
 
-/* Mobile: Stacked */
+/* Stacked for Mobile/Tablet */
 @media (max-width: 899px) {
     .teacher-grid {
         display: flex;
@@ -45,123 +233,252 @@ h3 { color: var(--brand-cyan); font-weight: 700; margin-bottom: 15px; border-bot
     }
 }
 
-/* --- CARDS --- */
+/* Cards */
 .card {
     background: var(--card-bg);
     padding: 25px;
     border-radius: var(--radius);
-    box-shadow: var(--shadow);
+    box-shadow: var(--shadow-md);
     border: 1px solid var(--border-color);
+    margin-bottom: 20px;
 }
-.prompt-card { border-top: 5px solid var(--brand-cyan); }
-.auth-card { border-top: 5px solid var(--brand-gold); background: #fdfdfd; }
+.prompt-card { border-top: 4px solid var(--brand-cyan); }
+.auth-card { border-top: 4px solid var(--brand-gold); background: #fcfcfc; }
 
-/* --- FORMS & INPUTS --- */
+/* Inputs & Forms */
 .form-group { margin-bottom: 15px; }
-label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; color: var(--brand-dark); }
-
-input, textarea {
-    width: 100%;
-    padding: 12px;
-    border: 2px solid #e2e8f0;
-    border-radius: 8px;
-    transition: 0.3s;
-    background: #fff;
-    font-size: 1rem;
+label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--brand-dark);
 }
 
-input:focus, textarea:focus {
+input[type="text"],
+input[type="password"],
+input[type="number"],
+textarea,
+select {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: var(--transition);
+    background: #fff;
+}
+
+input:focus, textarea:focus, select:focus {
     border-color: var(--brand-cyan);
     outline: none;
-    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
 }
 
-/* BIG TEXTAREAS */
 textarea.input-lg {
-    min-height: 120px; /* Αρκετός χώρος για γράψιμο */
+    min-height: 120px;
     resize: vertical;
 }
 
-/* 2-Column inside form */
 .grid-2-col {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 15px;
-    margin-bottom: 15px;
 }
 
-/* --- BUTTONS --- */
-button { cursor: pointer; border: none; border-radius: 8px; font-weight: 700; transition: 0.2s; }
+/* =========================================
+   6. BUTTONS
+   ========================================= */
+button {
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
 
 .primary-btn {
-    background: var(--brand-dark);
+    background-color: var(--brand-dark);
     color: var(--brand-gold);
+    padding: 12px 24px;
+    font-size: 1.1rem;
     box-shadow: 0 4px 6px rgba(5, 30, 62, 0.2);
 }
-.primary-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(5, 30, 62, 0.3); }
+.primary-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(5, 30, 62, 0.3);
+    filter: brightness(1.1);
+}
+
+.secondary-btn {
+    background-color: #e2e8f0;
+    color: #333;
+    padding: 10px 16px;
+    font-size: 0.95rem;
+}
+.secondary-btn:hover { background-color: #cbd5e1; }
 
 .big-start-btn {
     width: 100%;
     padding: 18px;
-    font-size: 1.2rem;
+    font-size: 1.25rem;
+    letter-spacing: 0.5px;
     margin-top: 15px;
-    letter-spacing: 1px;
 }
 
-.secondary-btn { background: #e2e8f0; color: #333; padding: 8px 12px; font-size: 0.9em; }
-.secondary-btn:hover { background: #cbd5e1; }
+/* =========================================
+   7. MONITORING DASHBOARD & CHAT UI
+   ========================================= */
+#monitor-panel, #student-chat-ui {
+    background: white;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
 
-/* --- MONITORING UI --- */
-.monitor-header {
+/* Headers */
+.monitor-header, #student-chat-ui > div:first-child {
     background: var(--brand-dark);
-    padding: 15px 25px;
-    border-radius: 12px 12px 0 0;
+    color: white;
+    padding: 15px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
-.room-code-badge { color: var(--brand-gold); font-size: 1.2em; font-weight: bold; }
+.monitor-header h2 { color: white; margin: 0; font-size: 1.3rem; }
+.room-code-badge {
+    color: var(--brand-gold);
+    font-weight: bold;
+    font-size: 1.2rem;
+    background: rgba(255,255,255,0.1);
+    padding: 5px 10px;
+    border-radius: 6px;
+}
 
+/* Split View (Sidebar + Main) */
 .monitor-grid {
     display: flex;
-    height: 80vh;
-    border: 1px solid #ddd;
-    border-top: none;
-    border-radius: 0 0 12px 12px;
-    background: white;
-    overflow: hidden;
+    height: 100%;
+    border-top: 1px solid #eee;
 }
 
 .monitor-sidebar {
-    width: 250px;
+    width: 280px;
     background: #f8f9fa;
     border-right: 1px solid #eee;
     display: flex;
     flex-direction: column;
 }
 
-.sidebar-header { padding: 15px; font-weight: bold; border-bottom: 1px solid #ddd; background: #eee; }
+.monitor-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: white;
+}
 
+.sidebar-header, .chat-header {
+    padding: 15px;
+    font-weight: 700;
+    background: #f1f2f6;
+    border-bottom: 1px solid #ddd;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Team List Items */
 .team-item {
     padding: 15px;
     border-bottom: 1px solid #eee;
     cursor: pointer;
-    transition: 0.2s;
+    transition: background 0.2s;
+    font-weight: 500;
 }
-.team-item:hover { background: #e3f2fd; }
-.team-item.active { background: #fff9c4; border-left: 5px solid var(--brand-gold); font-weight: bold; }
+.team-item:hover { background: #e8f4fd; }
+.team-item.active {
+    background: #fff9c4; /* Light Yellow */
+    border-left: 5px solid var(--brand-gold);
+    color: var(--brand-dark);
+    font-weight: 700;
+}
 
-.monitor-main { flex: 1; display: flex; flex-direction: column; }
-.chat-header { padding: 15px; border-bottom: 1px solid #eee; background: #fafafa; font-weight: bold; color: var(--brand-cyan); }
-#monitor-chat-area { flex: 1; overflow-y: auto; padding: 20px; background: #fff; display: flex; flex-direction: column; gap: 10px; }
+/* Chat Area */
+#monitor-chat-area, #chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background: #f5f7fa;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
 
 /* Chat Bubbles */
-.msg-bubble { padding: 12px 16px; border-radius: 12px; max-width: 80%; line-height: 1.5; }
-.msg-bubble.student { align-self: flex-start; background: var(--brand-cyan); color: white; border-radius: 12px 12px 12px 0; }
-.msg-bubble.ai { align-self: flex-start; background: white; border: 1px solid #eee; border-left: 4px solid var(--brand-gold); color: #333; border-radius: 12px 12px 0 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.msg-bubble, #chat-messages > div {
+    max-width: 80%;
+    padding: 12px 16px;
+    font-size: 1rem;
+    line-height: 1.5;
+    position: relative;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    animation: fadeInUp 0.3s ease-out;
+}
 
-/* MOBILE RESPONSIVE MONITOR */
+/* Student Bubble (Right/Greenish or Cyan) */
+.msg-bubble.student,
+#chat-messages > div[style*="align-self: flex-end"] {
+    align-self: flex-end;
+    background: var(--brand-cyan);
+    color: white;
+    border-radius: 18px 18px 2px 18px;
+}
+
+/* AI Bubble (Left/White) */
+.msg-bubble.ai,
+.ai-msg,
+#chat-messages > div[style*="align-self: flex-start"] {
+    align-self: flex-start;
+    background: white;
+    color: var(--text-main);
+    border: 1px solid #eee;
+    border-left: 4px solid var(--brand-gold) !important;
+    border-radius: 18px 18px 18px 2px;
+}
+
+/* Student Chat Input Area */
+#student-chat-ui textarea {
+    resize: none;
+    border-radius: 20px;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+}
+#send-btn {
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* =========================================
+   8. RESPONSIVE MEDIA QUERIES
+   ========================================= */
 @media (max-width: 768px) {
+    .container { padding: 10px; }
+    
+    .welcome-title { font-size: 2rem; }
+    .role-selection { flex-direction: column; }
+    
     .monitor-grid { flex-direction: column; }
-    .monitor-sidebar { width: 100%; height: 150px; overflow-y: auto; }
+    .monitor-sidebar { width: 100%; height: 150px; overflow-y: auto; border-bottom: 2px solid #ddd; }
 }
