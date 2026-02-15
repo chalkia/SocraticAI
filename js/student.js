@@ -1,48 +1,60 @@
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, query, where, getDocs, addDoc, serverTimestamp, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-logic.js';
 import { askGemini } from './gemini-api.js';
 import { getTranslation } from './i18n.js';
 
 export function renderStudentScreen(container, lang) {
-    // Χρησιμοποιούμε τις μεταφράσεις στο HTML
     container.innerHTML = `
-        <div id="student-login" style="text-align:center; padding:20px;">
-            <h2>${getTranslation(lang, 'student_btn')}</h2>
-            
-            <div style="margin-bottom:15px;">
-                <input type="text" id="student-name" placeholder="${getTranslation(lang, 'student_name_placeholder')}" style="padding:10px; font-size:1.1em; width:250px; margin-bottom:5px;">
+        <div id="student-setup" class="dashboard-container">
+            <div class="header-section">
+                <h2><i class="fa-solid fa-graduation-cap"></i> ${getTranslation(lang, 'student_btn')}</h2>
+                <p class="subtitle">Εισάγετε τα στοιχεία σας για να ξεκινήσετε.</p>
             </div>
             
-            <input type="text" id="room-code-input" placeholder="${getTranslation(lang, 'room_code_placeholder')}" style="padding:10px; font-size:1.2em; text-transform:uppercase; width:250px;">
-            <br><br>
-            <button id="join-room-btn" class="primary-btn" style="background:#4A90E2; color:white; padding:10px 20px;">${getTranslation(lang, 'join_room')}</button>
-            <p id="login-error" style="color:red; margin-top:10px;"></p>
+            <div class="card auth-card">
+                <div class="form-group">
+                    <label><strong>${getTranslation(lang, 'student_name_placeholder')}</strong></label>
+                    <input type="text" id="student-name" placeholder="π.χ. Μαρία ή Ομάδα Α">
+                </div>
+                
+                <div class="form-group">
+                    <label><strong>${getTranslation(lang, 'room_code_placeholder')}</strong></label>
+                    <input type="text" id="room-code-input" placeholder="ROOM-XXXX" style="text-transform:uppercase;">
+                </div>
+
+                <button id="join-room-btn" class="primary-btn big-start-btn">
+                    ${getTranslation(lang, 'join_room')} <i class="fa-solid fa-right-to-bracket"></i>
+                </button>
+                <p id="login-error" style="color:var(--brand-danger); margin-top:10px; font-weight:bold;"></p>
+            </div>
         </div>
 
-        <div id="student-chat-ui" style="display:none; height:80vh; flex-direction:column;">
-            <div style="background:#eee; padding:10px; display:flex; justify-content:space-between; align-items:center;">
-                <span id="room-display" style="font-weight:bold;"></span>
-                <span id="questions-left" style="background:#ff5722; color:white; padding:5px 10px; border-radius:15px; font-size:0.9em;"></span>
+        <div id="student-chat-ui" style="display:none; height:90vh; flex-direction:column;">
+            <div class="chat-header-bar">
+                <span id="room-display" class="room-code-badge"></span>
+                <span id="questions-left" class="msg-count-badge"></span>
             </div>
 
-            <div id="chat-messages" style="flex:1; overflow-y:auto; padding:10px; background:#f9f9f9; display:flex; flex-direction:column; gap:10px;">
-                <div class="ai-msg" style="background:#e3f2fd; padding:10px; border-radius:10px; align-self:flex-start; max-width:80%;">
-                    ${getTranslation(lang, 'welcome_ai')}
-                </div>
-            </div>
+            <div id="chat-messages" class="chat-window"></div>
 
-            <div style="padding:10px; background:white; border-top:1px solid #ddd; display:flex; gap:10px; align-items:center;">
-                <label for="image-upload" style="cursor:pointer; font-size:1.5em;">📷</label>
+            <div class="chat-input-area">
+                <label for="image-upload" class="secondary-btn" style="padding:10px; margin-right:5px; cursor:pointer;">
+                    <i class="fa-solid fa-camera"></i>
+                </label>
                 <input type="file" id="image-upload" accept="image/*" style="display:none;">
-                <div id="img-preview" style="display:none; width:40px; height:40px; border:1px solid #ccc; background-size:cover;"></div>
+                
+                <div id="img-preview-container" style="display:none; position:relative; margin-right:5px;">
+                    <div id="img-preview" style="width:40px; height:40px; border-radius:5px; background-size:cover; border:1px solid #ccc;"></div>
+                    <button id="clear-img" style="position:absolute; top:-5px; right:-5px; background:red; color:white; border:none; border-radius:50%; width:15px; height:15px; font-size:10px; cursor:pointer;">x</button>
+                </div>
 
-                <textarea id="user-input" rows="1" placeholder="${getTranslation(lang, 'write_question')}" style="flex:1; padding:10px;"></textarea>
-                <button id="send-btn" style="background:#27ae60; color:white; border:none; padding:10px 15px; border-radius:5px;">➤</button>
+                <textarea id="user-input" rows="1" placeholder="${getTranslation(lang, 'write_question')}" style="flex:1;"></textarea>
+                <button id="send-btn" class="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
             </div>
         </div>
     `;
 
-    // --- LOGIC ---
+    // --- LOGIC VARIABLES ---
     let currentRoomData = null;
     let currentRoomDocId = null;
     let questionsLeft = 0;
@@ -51,7 +63,7 @@ export function renderStudentScreen(container, lang) {
     let studentName = "Anonymous";
     let chatHistory = []; 
 
-    // 1. JOIN ROOM
+    // 1. JOIN ROOM LOGIC
     document.getElementById('join-room-btn').addEventListener('click', async () => {
         const code = document.getElementById('room-code-input').value.trim().toUpperCase();
         const nameInput = document.getElementById('student-name').value.trim();
@@ -62,7 +74,7 @@ export function renderStudentScreen(container, lang) {
             return;
         }
 
-        errorEl.innerText = getTranslation(lang, 'searching');
+        errorEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${getTranslation(lang, 'searching')}`;
         studentName = nameInput;
 
         try {
@@ -73,21 +85,30 @@ export function renderStudentScreen(container, lang) {
                 errorEl.innerText = getTranslation(lang, 'room_not_found');
             } else {
                 const docSnap = querySnapshot.docs[0];
+                // Έλεγχος αν το δωμάτιο είναι ενεργό
+                if (docSnap.data().status !== 'active') {
+                    errorEl.innerText = "Το δωμάτιο δεν είναι ενεργό.";
+                    return;
+                }
+
                 currentRoomData = docSnap.data();
                 currentRoomDocId = docSnap.id;
                 questionsLeft = currentRoomData.maxMessages;
                 
-                // Δημιουργία ID
-                studentId = studentName + '_' + Date.now(); 
-
+                studentId = 'std-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
                 chatHistory = []; 
-                document.getElementById('student-login').style.display = 'none';
+
+                // UI Switch
+                document.getElementById('student-setup').style.display = 'none';
                 document.getElementById('student-chat-ui').style.display = 'flex';
-                document.getElementById('room-display').innerText = `${code} | ${studentName}`;
+                document.getElementById('room-display').innerHTML = `<i class="fa-solid fa-door-open"></i> ${code}`;
                 updateCounter();
 
-                // Log entry
-                logMessageToDB("SYSTEM", `${studentName} joined.`);
+                // Listen for Broadcasts & Teacher Messages
+                startRealtimeListener(currentRoomDocId);
+
+                // Send Greeting Trigger to AI (Invisible System Prompt)
+                triggerSystemGreeting();
             }
         } catch (err) {
             console.error(err);
@@ -95,7 +116,33 @@ export function renderStudentScreen(container, lang) {
         }
     });
 
-    // 2. IMAGE HANDLING
+    // 2. REALTIME LISTENER (Για Broadcasts & History)
+    function startRealtimeListener(roomId) {
+        const q = query(collection(db, "rooms", roomId, "messages"), orderBy("timestamp", "asc"));
+        
+        onSnapshot(q, (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "added") {
+                    const msg = change.doc.data();
+                    
+                    // Εμφανίζουμε: 
+                    // 1. Τα δικά μας μηνύματα (studentId)
+                    // 2. Μηνύματα καθηγητή (Broadcast ή Direct)
+                    // 3. Απαντήσεις AI που αφορούν εμάς
+                    if (msg.studentId === studentId || msg.sender === 'teacher' || (msg.sender === 'ai' && msg.studentId === studentId)) {
+                        
+                        // Αν το μήνυμα δεν υπάρχει ήδη στο UI (αποφυγή διπλοτύπων από το local addMessageUI)
+                        const existingMsg = document.getElementById(`msg-${msg.timestamp?.toMillis ? msg.timestamp.toMillis() : 'temp'}`);
+                        if (!existingMsg) {
+                            addMessageUI(msg.text, msg.sender, msg.image || null, false); // false = not local instant render
+                        }
+                    }
+                }
+            });
+        });
+    }
+
+    // 3. IMAGE HANDLING
     document.getElementById('image-upload').addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -103,33 +150,53 @@ export function renderStudentScreen(container, lang) {
             reader.onload = function(evt) {
                 selectedImageBase64 = evt.target.result;
                 const preview = document.getElementById('img-preview');
-                preview.style.display = 'block';
+                document.getElementById('img-preview-container').style.display = 'block';
                 preview.style.backgroundImage = `url(${selectedImageBase64})`;
             };
             reader.readAsDataURL(file);
         }
     });
 
-    // 3. SEND MESSAGE
-    document.getElementById('send-btn').addEventListener('click', async () => {
+    document.getElementById('clear-img').addEventListener('click', () => {
+        selectedImageBase64 = null;
+        document.getElementById('img-preview-container').style.display = 'none';
+        document.getElementById('image-upload').value = '';
+    });
+
+    // 4. SEND MESSAGE LOGIC
+    document.getElementById('send-btn').addEventListener('click', handleSendMessage);
+    document.getElementById('user-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSendMessage();
+        }
+    });
+
+    async function handleSendMessage() {
         const inputEl = document.getElementById('user-input');
         const text = inputEl.value.trim();
 
         if ((!text && !selectedImageBase64) || questionsLeft <= 0) return;
 
-        addMessageUI(text, 'user', selectedImageBase64);
-        inputEl.value = '';
+        // 1. Εμφάνισε το άμεσα στον χρήστη (Optimistic UI)
+        addMessageUI(text, 'student', selectedImageBase64, true);
+        
         const imageToSend = selectedImageBase64;
+        const msgText = text; // Κρατάμε το κείμενο πριν καθαρίσουμε
+
+        // Reset inputs
+        inputEl.value = '';
         selectedImageBase64 = null;
-        document.getElementById('img-preview').style.display = 'none';
+        document.getElementById('img-preview-container').style.display = 'none';
         document.getElementById('image-upload').value = '';
         
         questionsLeft--;
         updateCounter();
 
-        await logMessageToDB("student", text);
+        // 2. Log to Firestore
+        await logMessageToDB("student", msgText, imageToSend);
 
-        // Prompt Construction
+        // 3. Prepare Gemini Prompt
         let fullPrompt = `System Instruction: ${currentRoomData.teacherPrompt}\n\n`;
         const recentHistory = chatHistory.slice(-6); 
         if (recentHistory.length > 0) {
@@ -139,87 +206,43 @@ export function renderStudentScreen(container, lang) {
             });
             fullPrompt += "--- End of History ---\n\n";
         }
-        fullPrompt += `Student: ${text}\n`;
+        fullPrompt += `Student: ${msgText}\n`;
         fullPrompt += `Tutor:`;
 
-        chatHistory.push({ role: 'user', text: text });
+        chatHistory.push({ role: 'user', text: msgText });
 
-        // Loading message translated
+        // 4. Show Loading Indicator
         const loadingId = addMessageUI(getTranslation(lang, 'thinking'), 'ai-loading');
 
-        const response = await askGemini(fullPrompt, currentRoomData.apiKey, imageToSend);
-
-        const loadingEl = document.getElementById(loadingId);
-        if (loadingEl) {
-            loadingEl.innerText = response;
-            loadingEl.classList.remove('ai-loading');
-        }
-
-        await logMessageToDB("ai", response);
-        chatHistory.push({ role: 'ai', text: response });
-    });
-
-    async function logMessageToDB(senderRole, messageText) {
-        if (!currentRoomDocId) return;
+        // 5. Call Gemini API
         try {
-            await addDoc(collection(db, "rooms", currentRoomDocId, "messages"), {
-                studentId: studentId,
-                studentName: studentName,
-                sender: senderRole,
-                text: messageText,
-                timestamp: serverTimestamp()
-            });
+            const response = await askGemini(fullPrompt, currentRoomData.apiKey, imageToSend);
+            
+            // Remove loading and show real response
+            const loadingEl = document.getElementById(loadingId);
+            if (loadingEl) loadingEl.remove();
+
+            await logMessageToDB("ai", response);
+            chatHistory.push({ role: 'ai', text: response });
+            
+            // Το UI θα ενημερωθεί αυτόματα από τον Realtime Listener ή μπορούμε να το κάνουμε manual αν θέλουμε πιο γρήγορα
+            // Εδώ αφήνουμε τον listener να το κάνει για συνέπεια, ή το προσθέτουμε manual αν καθυστερεί η βάση.
+            // Για τώρα, αφήνουμε τον listener να το πιάσει από το "added" event.
+
         } catch (error) {
-            console.error("Error logging:", error);
+            console.error(error);
+            const loadingEl = document.getElementById(loadingId);
+            if (loadingEl) {
+                loadingEl.innerText = "Error: " + error.message;
+                loadingEl.style.color = "red";
+            }
         }
     }
 
-    function updateCounter() {
-        const badge = document.getElementById('questions-left');
-        const countText = getTranslation(lang, 'questions_left');
-        badge.innerText = `${questionsLeft} ${countText}`;
-        
-        if (questionsLeft === 0) {
-            badge.style.background = 'gray';
-            document.getElementById('user-input').disabled = true;
-            document.getElementById('user-input').placeholder = getTranslation(lang, 'no_questions');
-        }
-    }
+    // --- HELPER FUNCTIONS ---
 
-    function addMessageUI(text, type, img = null) {
-        const chatBox = document.getElementById('chat-messages');
-        const div = document.createElement('div');
-        const id = 'msg-' + Date.now();
-        div.id = id;
-        
-        div.style.padding = '10px';
-        div.style.borderRadius = '10px';
-        div.style.maxWidth = '80%';
-        div.style.wordWrap = 'break-word';
-
-        if (type === 'user') {
-            div.style.alignSelf = 'flex-end';
-            div.style.background = '#dcedc8'; // Πράσινο για τον χρήστη
-        } else {
-            div.style.alignSelf = 'flex-start';
-            div.style.background = '#e3f2fd'; // Μπλε για το AI
-        }
-
-        if (img) {
-            const imgEl = document.createElement('img');
-            imgEl.src = img;
-            imgEl.style.maxWidth = '100%';
-            imgEl.style.borderRadius = '5px';
-            imgEl.style.marginBottom = '5px';
-            div.appendChild(imgEl);
-        }
-
-        const textNode = document.createElement('div');
-        textNode.innerText = text;
-        div.appendChild(textNode);
-
-        chatBox.appendChild(div);
-        chatBox.scrollTop = chatBox.scrollHeight;
-        return id;
-    }
-}
+    async function triggerSystemGreeting() {
+        // Καλούμε το AI να χαιρετήσει με βάση το Prompt
+        const greetingPrompt = `
+        System Instruction: ${currentRoomData.teacherPrompt}
+        Task: Introduce yourself to the student named "${studentName}"
