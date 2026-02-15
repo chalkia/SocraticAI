@@ -22,8 +22,12 @@ export const translations = {
         
         lbl_rules: "5. Κανόνες & Περιορισμοί:",
         ph_rules: "π.χ. Max 3-4 ερωτήσεις ανά θέμα. Μην πλατιάζεις. Ζήτα διευκρινίσεις.",
-
-        // Student Keys
+        
+        prompt_updated: "Οι οδηγίες του AI ενημερώθηκαν!",
+        broadcast_placeholder: "Μήνυμα προς όλες τις ομάδες...",
+        btn_send_all: "Αποστολή σε όλους",
+        
+            // Student Keys
         student_name_placeholder: "Όνομα ή Ομάδα (π.χ. Ομάδα 1)",
         room_code_placeholder: "Κωδικός Δωματίου",
         join_room: "Είσοδος στο Δωμάτιο",
@@ -60,6 +64,10 @@ export const translations = {
         
         lbl_rules: "5. Rules & Constraints:",
         ph_rules: "e.g. Max 3-4 turns per topic. Do not ramble. Ask for specifics.",
+        
+        prompt_updated: "AI instructions updated!",
+        broadcast_placeholder: "Message to all teams...",
+        btn_send_all: "Send to all",
 
         // Student Keys
         student_name_placeholder: "Name or Team (e.g. Team 1)",
