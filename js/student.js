@@ -194,11 +194,13 @@ export function renderStudentScreen(container, lang) {
 
         if ((!text && !selectedImageBase64) || questionsLeft <= 0) return;
 
-        addMessageUI(text, 'student', selectedImageBase64, true);
+        // --- ΔΙΟΡΘΩΣΗ: ΑΦΑΙΡΕΣΑΜΕ ΤΟ addMessageUI ΑΠΟ ΕΔΩ ---
+        // Αφήνουμε τον Realtime Listener να εμφανίσει το μήνυμα μόλις φτάσει στον server.
         
         const imageToSend = selectedImageBase64;
         const msgText = text;
 
+        // Καθαρισμός πεδίων
         inputEl.value = '';
         selectedImageBase64 = null;
         document.getElementById('img-preview-container').style.display = 'none';
@@ -207,9 +209,10 @@ export function renderStudentScreen(container, lang) {
         questionsLeft--;
         updateCounter();
 
+        // 1. Αποθήκευση στη βάση (Αυτό θα ενεργοποιήσει τον Listener και θα δείξει το μήνυμα ΜΙΑ φορά)
         await logMessageToDB("student", msgText, imageToSend);
 
-        // Prepare Gemini Prompt
+        // 2. Προετοιμασία Prompt για το AI
         let fullPrompt = `System Instruction: ${currentRoomData.teacherPrompt}\n\n`;
         const recentHistory = chatHistory.slice(-6); 
         if (recentHistory.length > 0) {
@@ -224,10 +227,13 @@ export function renderStudentScreen(container, lang) {
 
         chatHistory.push({ role: 'user', text: msgText });
 
-        const loadingId = addMessageUI(getTranslation(lang, 'thinking'), 'ai-loading');
+        // Εμφάνιση "Thinking..." (Αυτό το θέλουμε τοπικά)
+        const loadingId = addMessageUI(getTranslation(lang, 'thinking'), 'ai-loading', null, true);
 
         try {
             const response = await askGemini(fullPrompt, currentRoomData.apiKey, imageToSend);
+            
+            // Αφαίρεση του "Thinking..."
             const loadingEl = document.getElementById(loadingId);
             if (loadingEl) loadingEl.remove();
 
@@ -243,6 +249,7 @@ export function renderStudentScreen(container, lang) {
             }
         }
     }
+
 
     // --- HELPER FUNCTIONS ---
 
