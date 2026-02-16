@@ -73,7 +73,7 @@ export function renderTeacherScreen(container, lang) {
                             <div style="display:flex; gap:5px;">
                                 <input type="text" id="power-user-id" placeholder="ID" style="width:50%;">
                                 <input type="password" id="power-user-pin" placeholder="PIN" style="width:30%;">
-                                <button id="load-config-btn" style="width:20%; padding:0;"><i class="fa-solid fa-download"></i></button>
+                                <button id="load-config-btn" style="width:20%; padding:0;"><i class="fa-solid fa-unlock"></i></button>
                             </div>
                         </div>
 
