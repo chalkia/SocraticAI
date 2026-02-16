@@ -79,9 +79,11 @@ export function renderTeacherScreen(container, lang) {
 
                         <div class="api-box" style="margin-top:15px; border: 1px dashed var(--brand-cyan); padding:10px; border-radius:8px;">
                             <label style="font-size:0.9em;"><i class="fa-solid fa-clock-rotate-left"></i> <strong>${getTranslation(lang, 'resume_session_title')}</strong></label>
-                            <div style="display:flex; gap:5px;">
-                                <input type="text" id="resume-room-id" placeholder="Room Code (ROOM-xxxx)" style="font-size:0.8em;">
-                                <button id="resume-btn" class="secondary-btn" style="padding:5px 10px;"><i class="fa-solid fa-right-to-bracket"></i></button>
+                            
+                            <div style="display:flex; align-items:center; background:white; border:1px solid #ccc; border-radius:4px;">
+                                <span style="padding:5px 8px; background:#eee; color:#555; font-size:0.8em; font-weight:bold; border-right:1px solid #ccc;">ROOM-</span>
+                                <input type="number" id="resume-room-id" placeholder="1234" style="border:none; padding:5px; width:100%; outline:none;">
+                                <button id="resume-btn" class="secondary-btn" style="padding:5px 10px; margin:2px;"><i class="fa-solid fa-right-to-bracket"></i></button>
                             </div>
                         </div>
 
@@ -125,10 +127,8 @@ export function renderTeacherScreen(container, lang) {
                         <p class="empty-state">${getTranslation(lang, 'dashboard_waiting')}</p>
                     </div>
                 </div>
-                
                 <div class="monitor-main" style="display:flex; flex-direction:column; height:100%; overflow:hidden;">
                     <div id="chat-header" class="chat-header">${getTranslation(lang, 'dashboard_select_team')}</div>
-                    
                     <div id="monitor-chat-area" style="flex:1; overflow-y:auto; padding:15px; padding-bottom:50px;"></div>
                 </div>
             </div>
@@ -168,10 +168,13 @@ export function renderTeacherScreen(container, lang) {
         } catch (e) { console.error(e); }
     });
 
-    // --- RESUME SESSION ---
+    // --- RESUME SESSION (FIXED PREFIX) ---
     document.getElementById('resume-btn').onclick = async () => {
-        const codeInput = document.getElementById('resume-room-id').value.trim().toUpperCase();
-        if (!codeInput) return alert(getTranslation(lang, 'room_code_placeholder'));
+        // AUTO PREPEND 'ROOM-'
+        const codeNum = document.getElementById('resume-room-id').value.trim();
+        const codeInput = 'ROOM-' + codeNum;
+        
+        if (!codeNum) return alert(getTranslation(lang, 'room_code_placeholder'));
         
         statusEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>...`;
         try {
@@ -322,7 +325,6 @@ Use the Socratic method where appropriate.
             const icon = msg.sender === 'student' ? 'fa-user' : (msg.sender === 'ai' ? 'fa-brain' : 'fa-chalkboard-user');
             div.innerHTML = `<strong><i class="fa-solid ${icon}"></i>:</strong> ${msg.text}`;
             chatAreaEl.appendChild(div);
-            // Διασφαλίζουμε ότι θα πάει πάντα στο τέλος
             chatAreaEl.scrollTop = chatAreaEl.scrollHeight;
         }
     }
