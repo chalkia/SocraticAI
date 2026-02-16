@@ -1,4 +1,4 @@
-import { doc, getDoc, collection, addDoc, updateDoc, serverTimestamp, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { doc, getDoc, getDocs, collection, addDoc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-logic.js';
 import { getTranslation } from './i18n.js';
 
@@ -166,18 +166,48 @@ export function renderTeacherScreen(container, lang) {
         } catch (e) { console.error(e); }
     });
 
+// 3. Resume Session Logic (ΔΙΟΡΘΩΜΕΝΟ)
     document.getElementById('resume-btn').onclick = async () => {
-        const roomId = document.getElementById('resume-room-id').value.trim();
-        if (!roomId) return;
-        const roomRef = doc(db, "rooms", roomId);
-        const roomSnap = await getDoc(roomRef);
-        if (roomSnap.exists()) {
-            localStorage.setItem('gemini_api_key', roomSnap.data().apiKey);
-            document.getElementById('setup-panel').style.display = 'none';
-            document.getElementById('monitor-panel').style.display = 'block';
-            document.getElementById('monitor-room-code').innerText = roomSnap.data().code;
-            startLiveMonitoring(roomId);
-        } else { alert(getTranslation(lang, 'room_not_found')); }
+        const codeInput = document.getElementById('resume-room-id').value.trim().toUpperCase();
+        
+        if (!codeInput) {
+            alert(getTranslation(lang, 'room_code_placeholder'));
+            return;
+        }
+        
+        statusEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Αναζήτηση...`;
+
+        try {
+            // Ψάχνουμε στη συλλογή rooms για το έγγραφο που έχει αυτό το code
+            const q = query(collection(db, "rooms"), where("code", "==", codeInput));
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+                // Βρήκαμε το δωμάτιο!
+                const roomDoc = querySnapshot.docs[0];
+                const roomData = roomDoc.data();
+
+                // Φόρτωση του API Key
+                localStorage.setItem('gemini_api_key', roomData.apiKey);
+
+                // Αλλαγή οθόνης
+                document.getElementById('setup-panel').style.display = 'none';
+                document.getElementById('monitor-panel').style.display = 'block';
+                document.getElementById('monitor-room-code').innerText = roomData.code;
+
+                statusEl.innerHTML = ""; 
+                
+                // Εκκίνηση παρακολούθησης με το ID που βρήκαμε
+                startLiveMonitoring(roomDoc.id);
+            } else {
+                statusEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Room not found`;
+                statusEl.style.color = "var(--brand-danger)";
+                alert(getTranslation(lang, 'room_not_found'));
+            }
+        } catch (error) {
+            console.error("Resume Error:", error);
+            statusEl.innerHTML = "Error searching room";
+        }
     };
 
     document.getElementById('start-session-btn').addEventListener('click', async () => {
