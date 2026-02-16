@@ -118,16 +118,18 @@ export function renderTeacherScreen(container, lang) {
                 </div>
             </div>
 
-            <div class="monitor-grid" style="height: calc(100% - 120px);">
+            <div class="monitor-grid" style="height: calc(100% - 130px);">
                 <div class="monitor-sidebar">
                     <div class="sidebar-header">${getTranslation(lang, 'dashboard_active_teams')}</div>
                     <div id="teams-list">
                         <p class="empty-state">${getTranslation(lang, 'dashboard_waiting')}</p>
                     </div>
                 </div>
-                <div class="monitor-main">
+                
+                <div class="monitor-main" style="display:flex; flex-direction:column; height:100%; overflow:hidden;">
                     <div id="chat-header" class="chat-header">${getTranslation(lang, 'dashboard_select_team')}</div>
-                    <div id="monitor-chat-area"></div>
+                    
+                    <div id="monitor-chat-area" style="flex:1; overflow-y:auto; padding:15px; padding-bottom:50px;"></div>
                 </div>
             </div>
         </div>
@@ -166,7 +168,7 @@ export function renderTeacherScreen(container, lang) {
         } catch (e) { console.error(e); }
     });
 
-    // --- RESUME SESSION (FIXED) ---
+    // --- RESUME SESSION ---
     document.getElementById('resume-btn').onclick = async () => {
         const codeInput = document.getElementById('resume-room-id').value.trim().toUpperCase();
         if (!codeInput) return alert(getTranslation(lang, 'room_code_placeholder'));
@@ -192,7 +194,7 @@ export function renderTeacherScreen(container, lang) {
         } catch (e) { console.error(e); }
     };
 
-    // --- START NEW SESSION (With OPEN vs STRICT Mode) ---
+    // --- START NEW SESSION ---
     document.getElementById('start-session-btn').addEventListener('click', async () => {
         const apiKey = localStorage.getItem('gemini_api_key');
         const consent = document.getElementById('research-consent-check').checked;
@@ -237,7 +239,7 @@ Use the Socratic method where appropriate.
         try {
             const docRef = await addDoc(collection(db, "rooms"), {
                 code: roomCode,
-                teacherPrompt: compiledPrompt, // Initial Prompt
+                teacherPrompt: compiledPrompt, 
                 maxMessages: parseInt(document.getElementById('max-messages').value),
                 apiKey: apiKey,
                 createdAt: serverTimestamp(),
@@ -320,6 +322,7 @@ Use the Socratic method where appropriate.
             const icon = msg.sender === 'student' ? 'fa-user' : (msg.sender === 'ai' ? 'fa-brain' : 'fa-chalkboard-user');
             div.innerHTML = `<strong><i class="fa-solid ${icon}"></i>:</strong> ${msg.text}`;
             chatAreaEl.appendChild(div);
+            // Διασφαλίζουμε ότι θα πάει πάντα στο τέλος
             chatAreaEl.scrollTop = chatAreaEl.scrollHeight;
         }
     }
