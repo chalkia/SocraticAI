@@ -80,7 +80,7 @@ export function renderTeacherScreen(container, lang) {
                         <div class="api-box" style="margin-top:15px; border: 1px dashed var(--brand-cyan); padding:10px; border-radius:8px;">
                             <label style="font-size:0.9em;"><i class="fa-solid fa-clock-rotate-left"></i> <strong>${getTranslation(lang, 'resume_session_title')}</strong></label>
                             <div style="display:flex; gap:5px;">
-                                <input type="text" id="resume-room-id" placeholder="Document ID" style="font-size:0.8em;">
+                                <input type="text" id="resume-room-id" placeholder="Room Code (ROOM-xxxx)" style="font-size:0.8em;">
                                 <button id="resume-btn" class="secondary-btn" style="padding:5px 10px;"><i class="fa-solid fa-right-to-bracket"></i></button>
                             </div>
                         </div>
@@ -105,7 +105,7 @@ export function renderTeacherScreen(container, lang) {
                 <div style="flex:1;">
                     <label style="font-size:0.8em; font-weight:bold;"><i class="fa-solid fa-pen-to-square"></i> LIVE PROMPT UPDATE</label>
                     <div style="display:flex; gap:10px;">
-                        <textarea id="live-prompt-input" placeholder="${getTranslation(lang, 'ph_method')}" style="height:40px; margin:0; font-size:0.9em;"></textarea>
+                        <textarea id="live-prompt-input" placeholder="Update AI instructions..." style="height:40px; margin:0; font-size:0.9em;"></textarea>
                         <button id="update-prompt-btn" class="secondary-btn" style="background:var(--brand-cyan); color:white;"><i class="fa-solid fa-sync"></i></button>
                     </div>
                 </div>
@@ -166,74 +166,78 @@ export function renderTeacherScreen(container, lang) {
         } catch (e) { console.error(e); }
     });
 
-// 3. Resume Session Logic (ΔΙΟΡΘΩΜΕΝΟ)
+    // --- RESUME SESSION (FIXED) ---
     document.getElementById('resume-btn').onclick = async () => {
         const codeInput = document.getElementById('resume-room-id').value.trim().toUpperCase();
+        if (!codeInput) return alert(getTranslation(lang, 'room_code_placeholder'));
         
-        if (!codeInput) {
-            alert(getTranslation(lang, 'room_code_placeholder'));
-            return;
-        }
-        
-        statusEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Αναζήτηση...`;
-
+        statusEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>...`;
         try {
-            // Ψάχνουμε στη συλλογή rooms για το έγγραφο που έχει αυτό το code
             const q = query(collection(db, "rooms"), where("code", "==", codeInput));
             const querySnapshot = await getDocs(q);
 
             if (!querySnapshot.empty) {
-                // Βρήκαμε το δωμάτιο!
                 const roomDoc = querySnapshot.docs[0];
                 const roomData = roomDoc.data();
-
-                // Φόρτωση του API Key
                 localStorage.setItem('gemini_api_key', roomData.apiKey);
-
-                // Αλλαγή οθόνης
                 document.getElementById('setup-panel').style.display = 'none';
                 document.getElementById('monitor-panel').style.display = 'block';
                 document.getElementById('monitor-room-code').innerText = roomData.code;
-
-                statusEl.innerHTML = ""; 
-                
-                // Εκκίνηση παρακολούθησης με το ID που βρήκαμε
+                statusEl.innerHTML = "";
                 startLiveMonitoring(roomDoc.id);
             } else {
-                statusEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Room not found`;
+                statusEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Not Found`;
                 statusEl.style.color = "var(--brand-danger)";
-                alert(getTranslation(lang, 'room_not_found'));
             }
-        } catch (error) {
-            console.error("Resume Error:", error);
-            statusEl.innerHTML = "Error searching room";
-        }
+        } catch (e) { console.error(e); }
     };
 
+    // --- START NEW SESSION (With OPEN vs STRICT Mode) ---
     document.getElementById('start-session-btn').addEventListener('click', async () => {
         const apiKey = localStorage.getItem('gemini_api_key');
         const consent = document.getElementById('research-consent-check').checked;
         if (!consent || !apiKey) return alert("Check API Key & Consent");
 
-        const contextVal = document.getElementById('setup-context').value.trim() || "General Learning";
+        const rawContext = document.getElementById('setup-context').value.trim();
+        const contextVal = rawContext || "General Assistance"; 
+
+        // Logic: Empty Context = Open Mode / Filled Context = Strict Mode
+        let behaviorInstructions = "";
+        if (rawContext) {
+            behaviorInstructions = `
+            STRICT TOPIC ENFORCEMENT:
+            1. The specific topic is: "${rawContext}".
+            2. You must POLITELY REFUSE questions that are completely unrelated to "${rawContext}".
+            3. Your goal is to guide students back to this topic.
+            `;
+        } else {
+            behaviorInstructions = `
+            OPEN MODE:
+            1. There is NO specific topic restriction.
+            2. You are free to answer any educational or general knowledge question.
+            3. Be helpful, polite, and safe.
+            `;
+        }
+
         const compiledPrompt = `
-ROLE & CONTEXT: ${contextVal}
+ROLE: AI Tutor
+CONTEXT: ${contextVal}
 TARGET AUDIENCE: ${document.getElementById('setup-grade').value.trim()}
 GOALS: ${document.getElementById('setup-goal').value.trim()}
 METHOD: ${document.getElementById('setup-method').value.trim()}
 RULES: ${document.getElementById('setup-rules').value.trim()}
 
-STRICT AI BEHAVIOR:
-1. First message must state topic: "${contextVal}".
-2. Only answer questions related to "${contextVal}".
-3. Use Socratic method.
+${behaviorInstructions}
+
+GENERAL INSTRUCTION:
+Use the Socratic method where appropriate.
         `.trim();
 
         const roomCode = 'ROOM-' + Math.floor(1000 + Math.random() * 9000);
         try {
             const docRef = await addDoc(collection(db, "rooms"), {
                 code: roomCode,
-                teacherPrompt: compiledPrompt,
+                teacherPrompt: compiledPrompt, // Initial Prompt
                 maxMessages: parseInt(document.getElementById('max-messages').value),
                 apiKey: apiKey,
                 createdAt: serverTimestamp(),
