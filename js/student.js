@@ -1,10 +1,9 @@
-import { collection, query, where, getDocs, addDoc, serverTimestamp, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { doc, collection, query, where, getDocs, addDoc, serverTimestamp, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-logic.js';
 import { askGemini } from './gemini-api.js';
 import { getTranslation } from './i18n.js';
 
 export function renderStudentScreen(container, lang) {
-    // Αν δεν έχει οριστεί γλώσσα, προεπιλογή Ελληνικά
     if (!localStorage.getItem('socratic_lang')) {
         localStorage.setItem('socratic_lang', 'gr');
         lang = 'gr';
@@ -68,14 +67,12 @@ export function renderStudentScreen(container, lang) {
         </div>
     `;
 
-    // --- CHANGE LANGUAGE LOGIC ---
     document.getElementById('card-lang-selector').addEventListener('change', (e) => {
         const newLang = e.target.value;
         localStorage.setItem('socratic_lang', newLang);
-        location.reload(); // Ανανέωση για να εφαρμοστεί η γλώσσα
+        location.reload(); 
     });
 
-    // --- LOGIC VARIABLES ---
     let currentRoomData = null;
     let currentRoomDocId = null;
     let questionsLeft = 0;
@@ -118,18 +115,21 @@ export function renderStudentScreen(container, lang) {
                 studentId = 'std-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
                 chatHistory = []; 
 
-                // --- UI Switch ---
-                // Κρύβουμε το setup (άρα και την επιλογή γλώσσας) και δείχνουμε το chat
                 document.getElementById('student-setup').style.display = 'none';
                 document.getElementById('student-chat-ui').style.display = 'flex';
                 document.getElementById('room-display').innerHTML = `<i class="fa-solid fa-door-open"></i> ${code}`;
                 
                 updateCounter();
 
-                // Listen for Broadcasts & Teacher Messages
                 startRealtimeListener(currentRoomDocId);
 
-                // Send Greeting Trigger to AI (Invisible System Prompt)
+                // --- NEW: LISTEN FOR PROMPT UPDATES ---
+                onSnapshot(doc(db, "rooms", currentRoomDocId), (docSnap) => {
+                    if (docSnap.exists()) {
+                        currentRoomData.teacherPrompt = docSnap.data().teacherPrompt;
+                    }
+                });
+
                 triggerSystemGreeting();
             }
         } catch (err) {
@@ -146,7 +146,6 @@ export function renderStudentScreen(container, lang) {
             snapshot.docChanges().forEach((change) => {
                 if (change.type === "added") {
                     const msg = change.doc.data();
-                    
                     if (msg.studentId === studentId || msg.sender === 'teacher' || (msg.sender === 'ai' && msg.studentId === studentId)) {
                         const existingMsg = document.getElementById(`msg-${msg.timestamp?.toMillis ? msg.timestamp.toMillis() : 'temp'}`);
                         if (!existingMsg) {
@@ -158,35 +157,33 @@ export function renderStudentScreen(container, lang) {
         });
     }
 
-    // 3. IMAGE HANDLING
+    // 3. IMAGE HANDLING & SEND
     document.getElementById('image-upload').addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = function(evt) {
+            reader.onload = (evt) => {
                 selectedImageBase64 = evt.target.result;
-                const preview = document.getElementById('img-preview');
                 document.getElementById('img-preview-container').style.display = 'block';
-                preview.style.backgroundImage = `url(${selectedImageBase64})`;
+                document.getElementById('img-preview').style.backgroundImage = `url(${selectedImageBase64})`;
             };
             reader.readAsDataURL(file);
         }
     });
 
-    document.getElementById('clear-img').addEventListener('click', () => {
+    document.getElementById('clear-img').onclick = () => {
         selectedImageBase64 = null;
         document.getElementById('img-preview-container').style.display = 'none';
         document.getElementById('image-upload').value = '';
-    });
+    };
 
-    // 4. SEND MESSAGE LOGIC
-    document.getElementById('send-btn').addEventListener('click', handleSendMessage);
-    document.getElementById('user-input').addEventListener('keypress', (e) => {
+    document.getElementById('send-btn').onclick = handleSendMessage;
+    document.getElementById('user-input').onkeypress = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSendMessage();
         }
-    });
+    };
 
     async function handleSendMessage() {
         const inputEl = document.getElementById('user-input');
@@ -194,13 +191,11 @@ export function renderStudentScreen(container, lang) {
 
         if ((!text && !selectedImageBase64) || questionsLeft <= 0) return;
 
-        // --- ΔΙΟΡΘΩΣΗ: ΑΦΑΙΡΕΣΑΜΕ ΤΟ addMessageUI ΑΠΟ ΕΔΩ ---
-        // Αφήνουμε τον Realtime Listener να εμφανίσει το μήνυμα μόλις φτάσει στον server.
+        // NO LOCAL UI ADD - Server Listener handles it
         
         const imageToSend = selectedImageBase64;
         const msgText = text;
 
-        // Καθαρισμός πεδίων
         inputEl.value = '';
         selectedImageBase64 = null;
         document.getElementById('img-preview-container').style.display = 'none';
@@ -209,11 +204,20 @@ export function renderStudentScreen(container, lang) {
         questionsLeft--;
         updateCounter();
 
-        // 1. Αποθήκευση στη βάση (Αυτό θα ενεργοποιήσει τον Listener και θα δείξει το μήνυμα ΜΙΑ φορά)
         await logMessageToDB("student", msgText, imageToSend);
 
-        // 2. Προετοιμασία Prompt για το AI
-        let fullPrompt = `System Instruction: ${currentRoomData.teacherPrompt}\n\n`;
+        // --- OVERRIDE LOGIC FOR PROMPT ---
+        let fullPrompt = `
+        === SYSTEM AUTHORITY ===
+        The following instructions are the CURRENT, LIVE MANDATE from the teacher.
+        OVERRIDE RULE: If these instructions conflict with any previous context, YOU MUST FOLLOW THESE NEW INSTRUCTIONS.
+        
+        === CURRENT INSTRUCTIONS ===
+        ${currentRoomData.teacherPrompt}
+        
+        === END OF INSTRUCTIONS ===
+        \n`;
+        
         const recentHistory = chatHistory.slice(-6); 
         if (recentHistory.length > 0) {
             fullPrompt += "--- Chat History ---\n";
@@ -227,13 +231,11 @@ export function renderStudentScreen(container, lang) {
 
         chatHistory.push({ role: 'user', text: msgText });
 
-        // Εμφάνιση "Thinking..." (Αυτό το θέλουμε τοπικά)
         const loadingId = addMessageUI(getTranslation(lang, 'thinking'), 'ai-loading', null, true);
 
         try {
             const response = await askGemini(fullPrompt, currentRoomData.apiKey, imageToSend);
             
-            // Αφαίρεση του "Thinking..."
             const loadingEl = document.getElementById(loadingId);
             if (loadingEl) loadingEl.remove();
 
@@ -241,7 +243,6 @@ export function renderStudentScreen(container, lang) {
             chatHistory.push({ role: 'ai', text: response });
             
         } catch (error) {
-            console.error(error);
             const loadingEl = document.getElementById(loadingId);
             if (loadingEl) {
                 loadingEl.innerText = "Error: " + error.message;
@@ -250,9 +251,7 @@ export function renderStudentScreen(container, lang) {
         }
     }
 
-
-    // --- HELPER FUNCTIONS ---
-
+    // --- HELPERS ---
     async function triggerSystemGreeting() {
         const targetLanguage = lang === 'gr' ? 'Greek' : 'English';
         
@@ -261,12 +260,12 @@ export function renderStudentScreen(container, lang) {
         
         IMMEDIATE TASK:
         1. Introduce yourself to the student named "${studentName}".
-        2. Briefly state the topic defined in the system instructions.
-        3. EXTREMELY IMPORTANT: Your output must be STRICTLY in ${targetLanguage}.
-        4. Do not use any other language.
+        2. IF a specific topic is defined in the instructions, mention it clearly.
+        3. IF NO specific topic is defined (Open Mode), just offer your help generally.
+        4. EXTREMELY IMPORTANT: Your output must be STRICTLY in ${targetLanguage}.
         `;
         
-        const loadingId = addMessageUI(getTranslation(lang, 'thinking'), 'ai-loading');
+        const loadingId = addMessageUI(getTranslation(lang, 'thinking'), 'ai-loading', null, true);
         
         try {
             const response = await askGemini(greetingPrompt, currentRoomData.apiKey);
@@ -275,7 +274,6 @@ export function renderStudentScreen(container, lang) {
             await logMessageToDB("ai", response);
             chatHistory.push({ role: 'ai', text: response });
         } catch (e) {
-            console.error("Greeting Error", e);
             document.getElementById(loadingId).remove();
         }
     }
@@ -291,15 +289,12 @@ export function renderStudentScreen(container, lang) {
                 image: image,
                 timestamp: serverTimestamp()
             });
-        } catch (error) {
-            console.error("Error logging:", error);
-        }
+        } catch (error) { console.error("Error logging:", error); }
     }
 
     function updateCounter() {
         const badge = document.getElementById('questions-left');
         badge.innerText = `${questionsLeft} ${getTranslation(lang, 'questions_left')}`;
-        
         if (questionsLeft === 0) {
             badge.style.background = 'gray';
             document.getElementById('user-input').disabled = true;
@@ -310,8 +305,7 @@ export function renderStudentScreen(container, lang) {
     function addMessageUI(text, type, img = null, isLocal = false) {
         const chatBox = document.getElementById('chat-messages');
         const div = document.createElement('div');
-        const id = 'msg-' + Date.now();
-        div.id = id;
+        div.id = 'msg-' + Date.now();
         div.className = `msg-bubble ${type}`;
 
         let iconClass = 'fa-brain';
@@ -329,16 +323,12 @@ export function renderStudentScreen(container, lang) {
         }
 
         let contentHtml = `<strong><i class="fa-solid ${iconClass}"></i> ${senderName}:</strong> `;
-        
-        if (img) {
-            contentHtml += `<br><img src="${img}" style="max-width:200px; border-radius:8px; margin-top:5px; border:1px solid #ccc;"><br>`;
-        }
-        
+        if (img) contentHtml += `<br><img src="${img}" style="max-width:200px; border-radius:8px; margin-top:5px; border:1px solid #ccc;"><br>`;
         contentHtml += text;
         div.innerHTML = contentHtml;
 
         chatBox.appendChild(div);
         chatBox.scrollTop = chatBox.scrollHeight;
-        return id;
+        return div.id;
     }
 }
