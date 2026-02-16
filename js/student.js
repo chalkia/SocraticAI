@@ -54,7 +54,7 @@ export function renderStudentScreen(container, lang) {
                 <label for="image-upload" class="secondary-btn" style="padding:10px; margin-right:5px; cursor:pointer;">
                     <i class="fa-solid fa-camera"></i>
                 </label>
-                <input type="file" id="image-upload" accept="image/*" style="display:none;">
+                <input type="file" id="image-upload" accept="image/*" capture="environment" style="display:none;">
                 
                 <div id="img-preview-container" style="display:none; position:relative; margin-right:5px;">
                     <div id="img-preview" style="width:40px; height:40px; border-radius:5px; background-size:cover; border:1px solid #ccc;"></div>
