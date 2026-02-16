@@ -24,7 +24,10 @@ export function renderStudentScreen(container, lang) {
                 
                 <div class="form-group">
                     <label><strong>${getTranslation(lang, 'room_code_placeholder')}</strong></label>
-                    <input type="text" id="room-code-input" placeholder="ROOM-XXXX" style="text-transform:uppercase;">
+                    <div style="display:flex; align-items:center; border:1px solid #ccc; border-radius:5px; padding:5px; background:white;">
+                        <span style="padding:5px 10px; background:#eee; color:#555; font-weight:bold; border-radius:3px; margin-right:10px;">ROOM-</span>
+                        <input type="number" id="room-code-input" placeholder="1234" style="border:none; outline:none; font-size:1.2em; width:100%; letter-spacing: 2px;">
+                    </div>
                 </div>
 
                 <div class="form-group" style="text-align:center; margin-bottom:20px;">
@@ -83,12 +86,15 @@ export function renderStudentScreen(container, lang) {
 
     // 1. JOIN ROOM LOGIC
     document.getElementById('join-room-btn').addEventListener('click', async () => {
-        const code = document.getElementById('room-code-input').value.trim().toUpperCase();
+        // --- FIXED: AUTO PREPEND 'ROOM-' ---
+        const codeNum = document.getElementById('room-code-input').value.trim();
+        const code = 'ROOM-' + codeNum; // Συνθέτουμε τον κωδικό αυτόματα
+        
         const nameInput = document.getElementById('student-name').value.trim();
         const errorEl = document.getElementById('login-error');
         
-        if (!nameInput) {
-            errorEl.innerText = getTranslation(lang, 'enter_name_alert');
+        if (!nameInput || !codeNum) {
+            errorEl.innerText = "Please enter Name and Room Number.";
             return;
         }
 
@@ -119,11 +125,14 @@ export function renderStudentScreen(container, lang) {
                 document.getElementById('student-chat-ui').style.display = 'flex';
                 document.getElementById('room-display').innerHTML = `<i class="fa-solid fa-door-open"></i> ${code}`;
                 
+                // Hide global lang button if exists
+                const globalLangBtn = document.getElementById('language-selector'); 
+                if (globalLangBtn) globalLangBtn.style.display = 'none';
+
                 updateCounter();
 
                 startRealtimeListener(currentRoomDocId);
 
-                // --- NEW: LISTEN FOR PROMPT UPDATES ---
                 onSnapshot(doc(db, "rooms", currentRoomDocId), (docSnap) => {
                     if (docSnap.exists()) {
                         currentRoomData.teacherPrompt = docSnap.data().teacherPrompt;
@@ -191,8 +200,6 @@ export function renderStudentScreen(container, lang) {
 
         if ((!text && !selectedImageBase64) || questionsLeft <= 0) return;
 
-        // NO LOCAL UI ADD - Server Listener handles it
-        
         const imageToSend = selectedImageBase64;
         const msgText = text;
 
@@ -206,7 +213,6 @@ export function renderStudentScreen(container, lang) {
 
         await logMessageToDB("student", msgText, imageToSend);
 
-        // --- OVERRIDE LOGIC FOR PROMPT ---
         let fullPrompt = `
         === SYSTEM AUTHORITY ===
         The following instructions are the CURRENT, LIVE MANDATE from the teacher.
@@ -270,7 +276,6 @@ export function renderStudentScreen(container, lang) {
         try {
             const response = await askGemini(greetingPrompt, currentRoomData.apiKey);
             document.getElementById(loadingId).remove();
-            
             await logMessageToDB("ai", response);
             chatHistory.push({ role: 'ai', text: response });
         } catch (e) {
