@@ -1,4 +1,4 @@
-import { doc, collection, query, where, getDocs, addDoc, serverTimestamp, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { doc, collection, query, where, getDocs, limit, addDoc, serverTimestamp, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-logic.js';
 import { askGemini } from './gemini-api.js';
 import { getTranslation } from './i18n.js';
@@ -31,7 +31,7 @@ export function renderStudentScreen(container, lang) {
                 </div>
 
                 <div class="form-group" style="text-align:center; margin-bottom:20px;">
-                    <label style="font-size:0.9em; color:#666;"><i class="fa-solid fa-language"></i> Language / Γλώσσα</label>
+                    <label style="font-size:0.9em; color:#666;">Language / Γλώσσα</label>
                     <select id="card-lang-selector" style="padding:8px; border-radius:5px; border:1px solid #ccc; width:100%; font-size:1em;">
                         <option value="gr" ${lang === 'gr' ? 'selected' : ''}>🇬🇷 Ελληνικά</option>
                         <option value="en" ${lang === 'en' ? 'selected' : ''}>🇬🇧 English</option>
@@ -86,9 +86,8 @@ export function renderStudentScreen(container, lang) {
 
     // 1. JOIN ROOM LOGIC
     document.getElementById('join-room-btn').addEventListener('click', async () => {
-        // --- FIXED: AUTO PREPEND 'ROOM-' ---
         const codeNum = document.getElementById('room-code-input').value.trim();
-        const code = 'ROOM-' + codeNum; // Συνθέτουμε τον κωδικό αυτόματα
+        const code = 'ROOM-' + codeNum;
         
         const nameInput = document.getElementById('student-name').value.trim();
         const errorEl = document.getElementById('login-error');
@@ -116,20 +115,34 @@ export function renderStudentScreen(container, lang) {
 
                 currentRoomData = docSnap.data();
                 currentRoomDocId = docSnap.id;
-                questionsLeft = currentRoomData.maxMessages;
+                questionsLeft = currentRoomData.maxMessages; 
+
+                // --- SMART RESUME CHECK ---
+                const existingStudentQuery = query(
+                    collection(db, "rooms", currentRoomDocId, "messages"),
+                    where("studentName", "==", studentName),
+                    limit(1)
+                );
+                const existingSnap = await getDocs(existingStudentQuery);
+
+                let isResuming = false;
+                if (!existingSnap.empty) {
+                    studentId = existingSnap.docs[0].data().studentId;
+                    console.log("Resuming session for:", studentName, studentId);
+                    isResuming = true;
+                } else {
+                    studentId = 'std-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+                }
                 
-                studentId = 'std-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
                 chatHistory = []; 
 
+                // --- UI SETUP ---
                 document.getElementById('student-setup').style.display = 'none';
                 document.getElementById('student-chat-ui').style.display = 'flex';
                 document.getElementById('room-display').innerHTML = `<i class="fa-solid fa-door-open"></i> ${code}`;
                 
-                // Hide global lang button if exists
                 const globalLangBtn = document.getElementById('language-selector'); 
                 if (globalLangBtn) globalLangBtn.style.display = 'none';
-
-                updateCounter();
 
                 startRealtimeListener(currentRoomDocId);
 
@@ -139,13 +152,27 @@ export function renderStudentScreen(container, lang) {
                     }
                 });
 
-                triggerSystemGreeting();
+                if (!isResuming) {
+                    triggerSystemGreeting();
+                } else {
+                    recalculateQuestionsLeft(currentRoomDocId);
+                }
+                
+                updateCounter();
             }
         } catch (err) {
             console.error(err);
             errorEl.innerText = getTranslation(lang, 'connection_error');
         }
     });
+
+    async function recalculateQuestionsLeft(roomId) {
+        const q = query(collection(db, "rooms", roomId, "messages"), where("studentId", "==", studentId), where("sender", "==", "student"));
+        const snap = await getDocs(q);
+        const used = snap.size;
+        questionsLeft = currentRoomData.maxMessages - used;
+        updateCounter();
+    }
 
     // 2. REALTIME LISTENER
     function startRealtimeListener(roomId) {
@@ -159,6 +186,9 @@ export function renderStudentScreen(container, lang) {
                         const existingMsg = document.getElementById(`msg-${msg.timestamp?.toMillis ? msg.timestamp.toMillis() : 'temp'}`);
                         if (!existingMsg) {
                             addMessageUI(msg.text, msg.sender, msg.image || null, false);
+                            
+                            if (msg.sender === 'student') chatHistory.push({ role: 'user', text: msg.text });
+                            if (msg.sender === 'ai') chatHistory.push({ role: 'ai', text: msg.text });
                         }
                     }
                 }
