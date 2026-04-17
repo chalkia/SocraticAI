@@ -279,10 +279,18 @@ export function renderStudentScreen(container, lang) {
             chatHistory.push({ role: 'ai', text: response });
             
         } catch (error) {
+            // === ΔΙΑΧΕΙΡΙΣΗ ΟΡΙΣΤΙΚΗΣ ΑΠΟΤΥΧΙΑΣ ===
+            console.warn("[Student UI] Οριστική αποτυχία AI. Επιστροφή της ερώτησης στον μαθητή.");
+            
+            // 1. Επιστρέφουμε την ερώτηση που αφαιρέσαμε στην αρχή
+            questionsLeft++;
+            updateCounter();
+            
+            // 2. Ενημερώνουμε το UI
             const loadingEl = document.getElementById(loadingId);
             if (loadingEl) {
-                loadingEl.innerText = "Error: " + error.message;
-                loadingEl.style.color = "red";
+                loadingEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Το σύστημα είναι υπερφορτωμένο. Η ερώτησή σας δεν χρεώθηκε. Παρακαλώ προσπαθήστε ξανά.`;
+                loadingEl.style.color = "var(--brand-danger)";
             }
         }
     }
