@@ -52,7 +52,14 @@ export function renderTeacherScreen(container, lang) {
                             <label>${getTranslation(lang, 'max_questions_lbl')}:</label>
                             <input type="number" id="max-messages" value="15" style="font-size:1.1em; padding:8px;">
                         </div>
-
+                        <div class="settings-box" style="margin-bottom:15px;">
+                            <label>Διάρκεια (Λεπτά):</label>
+                            <input type="number" id="session-duration" value="30" style="font-size:1.1em; padding:8px; width:60px;">
+                        </div>
+                        <div class="settings-box" style="margin-bottom:20px;">
+                            <input type="checkbox" id="allow-camera-check" checked>
+                            <label for="allow-camera-check" style="display:inline; font-weight:normal;">Επίτρεψε Χρήση Κάμερας</label>
+                        </div>
                         <div class="settings-box" style="margin-bottom:20px;">
                             <input type="checkbox" id="research-consent-check">
                             <label for="research-consent-check" style="display:inline; font-weight:normal;">${getTranslation(lang, 'research_consent')}</label>
@@ -118,6 +125,13 @@ export function renderTeacherScreen(container, lang) {
                         <button id="broadcast-btn" class="secondary-btn" style="background:var(--brand-success); color:white;"><i class="fa-solid fa-paper-plane"></i></button>
                     </div>
                 </div>
+                <div style="flex:1;">
+                    <label style="font-size:0.8em; font-weight:bold;"><i class="fa-solid fa-stopwatch"></i> ΧΡΟΝΟΜΕΤΡΟ</label>
+                    <div>
+                        <button id="start-timer-btn" class="primary-btn" style="background:var(--brand-danger); color:white;"><i class="fa-solid fa-play"></i> Έναρξη Χρόνου</button>
+                    </div>
+                </div>
+
             </div>
 
             <div class="monitor-grid" style="height: calc(100% - 130px);">
@@ -244,6 +258,9 @@ Use the Socratic method where appropriate.
                 code: roomCode,
                 teacherPrompt: compiledPrompt, 
                 maxMessages: parseInt(document.getElementById('max-messages').value),
+                duration: parseInt(document.getElementById('session-duration').value),
+                allowCamera: document.getElementById('allow-camera-check').checked,
+                timerStartedAt: null, // Αρχικά null, ξεκινάει από το Monitor
                 apiKey: apiKey,
                 createdAt: serverTimestamp(),
                 status: 'active'
@@ -327,5 +344,13 @@ Use the Socratic method where appropriate.
             chatAreaEl.appendChild(div);
             chatAreaEl.scrollTop = chatAreaEl.scrollHeight;
         }
+        document.getElementById('start-timer-btn').onclick = async () => {
+            console.log(`[Teacher UI] Εντολή εκκίνησης χρονομέτρου για το δωμάτιο ${roomDocId}`);
+                await updateDoc(doc(db, "rooms", roomDocId), { 
+                    timerStartedAt: serverTimestamp() 
+                });
+            alert("Ο χρόνος για τους μαθητές μόλις ξεκίνησε!");
+            document.getElementById('start-timer-btn').disabled = true; // Το απενεργοποιούμε μετά το πάτημα
+        };
     }
 }

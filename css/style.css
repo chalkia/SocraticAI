@@ -482,3 +482,55 @@ button {
     .monitor-grid { flex-direction: column; }
     .monitor-sidebar { width: 100%; height: 150px; overflow-y: auto; border-bottom: 2px solid #ddd; }
 }
+/* Σταθερό UI για τον μαθητή */
+#student-chat-ui {
+    display: flex;
+    flex-direction: column;
+    height: 100vh; /* Να πιάνει όλη την οθόνη */
+    overflow: hidden;
+}
+
+.chat-header-bar {
+    flex-shrink: 0; /* Δεν μικραίνει ποτέ */
+    padding: 15px;
+    background: var(--brand-blue, #051e3e);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    z-index: 10;
+}
+
+#chat-messages {
+    flex: 1; /* Πιάνει τον υπόλοιπο χώρο */
+    overflow-y: auto; /* ΜΟΝΟ αυτό το κομμάτι κάνει scroll */
+    padding: 15px;
+    background: #f4f7f6;
+}
+
+.chat-input-area {
+    flex-shrink: 0; /* Δεν μικραίνει ποτέ */
+    padding: 15px;
+    background: white;
+    border-top: 1px solid #ccc;
+    display: flex;
+    align-items: center;
+}
+
+/* Toasts CSS */
+.toast-msg {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #f39c12; /* Warning color */
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    z-index: 9999;
+    font-weight: bold;
+    transition: opacity 0.5s ease;
+}
+
+.toast-msg.danger { background: #e74c3c; }
+.toast-msg.fade-out { opacity: 0; }

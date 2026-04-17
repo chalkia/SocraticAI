@@ -145,12 +145,61 @@ export function renderStudentScreen(container, lang) {
                 if (globalLangBtn) globalLangBtn.style.display = 'none';
 
                 startRealtimeListener(currentRoomDocId);
+                
+                let timerInterval = null;
+                let threeMinToastShown = false;
+                let fiveQToastShown = false;
 
-                onSnapshot(doc(db, "rooms", currentRoomDocId), (docSnap) => {
-                    if (docSnap.exists()) {
-                        currentRoomData.teacherPrompt = docSnap.data().teacherPrompt;
-                    }
-                });
+                    onSnapshot(doc(db, "rooms", currentRoomDocId), (docSnap) => {
+                        if (docSnap.exists()) {
+                            const data = docSnap.data();
+                            currentRoomData.teacherPrompt = data.teacherPrompt;
+                            
+                            // 1. Έλεγχος Κάμερας
+                            const camLabel = document.querySelector('label[for="image-upload"]');
+                            if (data.allowCamera) {
+                                camLabel.style.display = 'inline-block';
+                                console.log("[Student UI] Η κάμερα ενεργοποιήθηκε από τον καθηγητή.");
+                            } else {
+                                camLabel.style.display = 'none';
+                                console.log("[Student UI] Η κάμερα απενεργοποιήθηκε από τον καθηγητή.");
+                            }
+
+                            // 2. Έλεγχος Χρονομέτρου
+                            if (data.timerStartedAt && !timerInterval) {
+                                console.log("[Student UI] Το χρονόμετρο ξεκίνησε!");
+                                const durationMs = data.duration * 60 * 1000;
+                                const startTime = data.timerStartedAt.toDate().getTime();
+
+                                timerInterval = setInterval(() => {
+                                    const now = new Date().getTime();
+                                    const elapsed = now - startTime;
+                                    const remaining = durationMs - elapsed;
+
+                                    if (remaining <= 0) {
+                                        clearInterval(timerInterval);
+                                        document.getElementById('room-display').innerHTML = `<i class="fa-solid fa-clock"></i> Τέλος Χρόνου`;
+                                        document.getElementById('user-input').disabled = true;
+                                        document.getElementById('send-btn').disabled = true;
+                                        console.log("[Student UI] Ο χρόνος έληξε.");
+                                        showToast(getTranslation(lang, 'time_up') || "Ο χρόνος έληξε!", 'danger');
+                                    } else {
+                                        // Υπολογισμός λεπτών και δευτερολέπτων
+                                        const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+                                        const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+                                        document.getElementById('room-display').innerHTML = `<i class="fa-solid fa-stopwatch"></i> ${minutes}m ${seconds}s`;
+
+                                        // Toast στα 3 λεπτά (180.000 ms)
+                                        if (remaining <= 180000 && remaining > 179000 && !threeMinToastShown) {
+                                            threeMinToastShown = true;
+                                            showToast("Απομένουν 3 λεπτά!", 'warning');
+                                        }
+                                    }
+                                }, 1000);
+                            }
+                        }
+                    });
+                            
 
                 if (!isResuming) {
                     triggerSystemGreeting();
@@ -159,7 +208,7 @@ export function renderStudentScreen(container, lang) {
                 }
                 
                 updateCounter();
-            }
+                }
         } catch (err) {
             console.error(err);
             errorEl.innerText = getTranslation(lang, 'connection_error');
@@ -338,13 +387,22 @@ export function renderStudentScreen(container, lang) {
     function updateCounter() {
         const badge = document.getElementById('questions-left');
         badge.innerText = `${questionsLeft} ${getTranslation(lang, 'questions_left')}`;
+        
+        console.log(`[Student UI] Ερωτήσεις που απομένουν: ${questionsLeft}`);
+
+        if (questionsLeft === 5 && !fiveQToastShown) {
+            fiveQToastShown = true;
+            showToast("Προσοχή: Απομένουν 5 ερωτήσεις!", 'warning');
+        }
+
         if (questionsLeft === 0) {
             badge.style.background = 'gray';
             document.getElementById('user-input').disabled = true;
+            document.getElementById('send-btn').disabled = true;
             document.getElementById('user-input').placeholder = getTranslation(lang, 'no_questions');
         }
     }
-
+    
     function addMessageUI(text, type, img = null, isLocal = false) {
         const chatBox = document.getElementById('chat-messages');
         const div = document.createElement('div');
@@ -373,5 +431,14 @@ export function renderStudentScreen(container, lang) {
         chatBox.appendChild(div);
         chatBox.scrollTop = chatBox.scrollHeight;
         return div.id;
+    }
+    function showToast(message, type = 'warning') {
+        console.log(`[Student UI Toast] Εμφάνιση: ${message}`);
+        const toast = document.createElement('div');
+        toast.className = `toast-msg ${type}`;
+        toast.innerHTML = `<i class="fa-solid fa-bell"></i> ${message}`;
+        document.body.appendChild(toast);
+        setTimeout(() => { toast.classList.add('fade-out'); }, 4000);
+        setTimeout(() => { toast.remove(); }, 4500);
     }
 }
